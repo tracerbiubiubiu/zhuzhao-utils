@@ -1,0 +1,16 @@
+# Binaries
+*.exe
+*.test
+*.out
+bin/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Go workspace
+go.work
+go.work.sum
