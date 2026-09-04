@@ -180,3 +180,31 @@ func TestTransport(t *testing.T) {
 		t.Fatalf("want 200, got %d: %s", resp.StatusCode, b)
 	}
 }
+
+// TestRootPathSignVerify 根 URL（无路径）回调的签名一致性——签名侧 URL.Path=""
+// 服务侧 "/"，canonical 归一化后必须互验通过（C9 实测暴露）。
+func TestRootPathSignVerify(t *testing.T) {
+	v := &Verifier{Keys: testKeys}
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		if err := v.Verify(r, body); err != nil {
+			w.WriteHeader(401)
+			w.Write([]byte(err.Error()))
+			return
+		}
+		w.WriteHeader(200)
+	}))
+	defer srv.Close()
+
+	req, _ := http.NewRequest(http.MethodPost, srv.URL, bytes.NewReader([]byte(`{}`)))
+	Sign(req, []byte(`{}`), SignOptions{AK: "zhuzhao", SK: testKeys["zhuzhao"]})
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		b, _ := io.ReadAll(resp.Body)
+		t.Fatalf("root path sign/verify mismatch: %d %s", resp.StatusCode, b)
+	}
+}

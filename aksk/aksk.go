@@ -132,7 +132,12 @@ func (v *Verifier) Verify(r *http.Request, body []byte) error {
 }
 
 // canonical 组装待签名串。requestID / operator 与请求头中的值一致（可能为空串）。
+// path 归一化：根路径请求签名侧 http.Request.URL.Path 为 ""、服务侧为 "/"——
+// 统一按 "/" 处理，否则根 URL 回调验签必失配。
 func canonical(method, path string, body []byte, ts, requestID, operator string) []byte {
+	if path == "" {
+		path = "/"
+	}
 	sum := sha256.Sum256(body)
 	return []byte(strings.Join([]string{
 		method, path, hex.EncodeToString(sum[:]), ts, requestID, operator,
