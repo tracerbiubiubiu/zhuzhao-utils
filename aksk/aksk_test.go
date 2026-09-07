@@ -208,3 +208,14 @@ func TestRootPathSignVerify(t *testing.T) {
 		t.Fatalf("root path sign/verify mismatch: %d %s", resp.StatusCode, b)
 	}
 }
+
+// TestEmptySKTreatedAsUnknown 纵深防御：密钥环中的空 SK 视同未知凭据（配置层
+// fail-closed 之外的兜底——HMAC 空密钥可被任意伪造）。
+func TestEmptySKTreatedAsUnknown(t *testing.T) {
+	v := &Verifier{Keys: map[string][]byte{"zhuzhao": nil}} // 空 SK 条目
+	req, _ := http.NewRequest(http.MethodPost, "/v1/tasks", bytes.NewReader([]byte(`{}`)))
+	Sign(req, []byte(`{}`), SignOptions{AK: "zhuzhao", SK: []byte("anything")})
+	if err := v.Verify(req, []byte(`{}`)); err == nil || !bytes.Contains([]byte(err.Error()), []byte(ErrUnknownCredential.Error())) {
+		t.Fatalf("empty SK must be rejected as unknown credential, got %v", err)
+	}
+}

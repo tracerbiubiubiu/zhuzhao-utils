@@ -102,7 +102,8 @@ func (v *Verifier) Verify(r *http.Request, body []byte) error {
 		return err
 	}
 	sk, ok := v.Keys[ak]
-	if !ok {
+	// 纵深防御：空 SK 条目 = HMAC 空密钥可伪造——视同未知凭据（配置层也应 fail-closed 拒启）
+	if !ok || len(sk) == 0 {
 		return fmt.Errorf("%w: %s", ErrUnknownCredential, ak)
 	}
 	stamp, err := time.Parse(time.RFC3339, ts)
