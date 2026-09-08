@@ -16,6 +16,10 @@
 // X-Request-ID / X-Operator 为可选属性（可为空串），一旦携带即纳入签名覆盖——
 // 验签方读取请求头中的值参与重算，故**篡改头会使签名失配**（身份断言不可伪造）。
 // 防重放：Ts 与验签方时钟偏差超过时间窗（默认 ±5min）即拒绝；内部低频调用不引入 nonce。
+//
+// 覆盖范围边界：PATH 仅取 URL.Path，**URL query 不参与签名**——按生态 API 约定
+// （phase3/16 §9），POST 的业务参数一律放请求体（已覆盖），GET 的 query 不受完整性保护。
+// 因此任何具有安全语义的参数（动作开关、目标标识等）不得放在 query 上。
 package aksk
 
 import (
@@ -85,10 +89,19 @@ func Sign(req *http.Request, body []byte, opt SignOptions) {
 
 // Verifier 服务端验签器。Keys 为预期调用方的 AK → SK 映射（小密钥环）。
 // MaxSkew 零值取 DefaultMaxSkew；Now 可注入时钟（测试用）。
+// MaxBodyBytes 为 GinMiddleware 读体上限：零值取 DefaultMaxBodyBytes，负值不限制（不建议）。
 type Verifier struct {
-	Keys    map[string][]byte
-	MaxSkew time.Duration
-	Now     func() time.Time
+	Keys         map[string][]byte
+	MaxSkew      time.Duration
+	Now          func() time.Time
+	MaxBodyBytes int64
+}
+
+func (v *Verifier) maxBody() int64 {
+	if v.MaxBodyBytes == 0 {
+		return DefaultMaxBodyBytes
+	}
+	return v.MaxBodyBytes
 }
 
 // Verify 校验请求签名。body 为请求体字节（中间件已读取还原，调用方再次绑定不受影响）。
