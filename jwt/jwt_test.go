@@ -23,7 +23,7 @@ func newTestManager(t *testing.T) *Manager {
 // 使 RT 绕过 30 分钟时效、登出黑名单与强制改密拦截。
 func TestParseAccessToken_RejectsRefreshToken(t *testing.T) {
 	m := newTestManager(t)
-	rt, _, err := m.GenerateRefreshToken(42, "device-1", 168*time.Hour)
+	rt, _, err := m.GenerateRefreshToken(42, "device-1", 168*time.Hour, 0)
 	require.NoError(t, err)
 
 	_, err = m.ParseAccessToken(rt)
@@ -55,7 +55,7 @@ func TestAccessTokenRoundTrip(t *testing.T) {
 
 func TestRefreshTokenRoundTrip(t *testing.T) {
 	m := newTestManager(t)
-	rt, _, err := m.GenerateRefreshToken(42, "device-1", time.Hour)
+	rt, _, err := m.GenerateRefreshToken(42, "device-1", time.Hour, 0)
 	require.NoError(t, err)
 
 	claims, err := m.ParseRefreshToken(rt)

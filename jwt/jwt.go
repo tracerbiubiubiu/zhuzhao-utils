@@ -40,6 +40,10 @@ type AccessClaims struct {
 type RefreshClaims struct {
 	UserID    int64  `json:"uid,string"`
 	DeviceID  string `json:"device_id"`
+	// Pwe 密码纪元（password epoch，可选）：签发时调用方注入当前纪元值；
+	// 改密/重置后调用方 INCR 纪元，Refresh 比对不一致即拒——密码重置吊销
+	// 与并发 Refresh 的 TOCTOU 防线。旧令牌无此字段解析为 0，纪元从 0 起平滑兼容。
+	Pwe       int64  `json:"pwe,omitempty"`
 	TokenType string `json:"typ"` // 必须为 TokenTypeRefresh
 	jwt.RegisteredClaims
 }
@@ -81,12 +85,13 @@ func (m *Manager) GenerateAccessToken(userID int64, username string, mustChangeP
 }
 
 // GenerateRefreshToken 签发 refreshToken
-func (m *Manager) GenerateRefreshToken(userID int64, deviceID string, ttl time.Duration) (string, string, error) {
+func (m *Manager) GenerateRefreshToken(userID int64, deviceID string, ttl time.Duration, pwe int64) (string, string, error) {
 	now := time.Now()
 	jti := generateJTI()
 	claims := RefreshClaims{
 		UserID:    userID,
 		DeviceID:  deviceID,
+		Pwe:       pwe,
 		TokenType: TokenTypeRefresh,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
