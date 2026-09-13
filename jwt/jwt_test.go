@@ -91,3 +91,36 @@ func TestClaimsJSONFieldNames(t *testing.T) {
 	assert.Contains(t, s, `"mcp":true`)
 	assert.Contains(t, s, `"typ":"access"`)
 }
+
+// Pwe 兼容矩阵钉住（v0.3.0）：新签 RT 携带纪元可解析回；旧格式（无 pwe 字段）
+// 解析为 0——存量令牌平滑兼容的承诺钉子。
+func TestRefreshTokenPweRoundtrip(t *testing.T) {
+	m := NewManager(Config{Secret: "test-secret", AccessTTL: time.Minute})
+	rt, _, err := m.GenerateRefreshToken(7, "dev-1", time.Hour, 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claims, err := m.ParseRefreshToken(rt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claims.Pwe != 5 {
+		t.Fatalf("pwe = %d, want 5", claims.Pwe)
+	}
+}
+
+func TestRefreshTokenLegacyFormatPweZero(t *testing.T) {
+	// 手工构造无 pwe 字段的旧格式 RT（v0.2.x 时代签发形态）
+	m := NewManager(Config{Secret: "test-secret", AccessTTL: time.Minute})
+	rt, _, err := m.GenerateRefreshToken(7, "dev-1", time.Hour) // pwe=0 → omitempty 不落字段
+	if err != nil {
+		t.Fatal(err)
+	}
+	claims, err := m.ParseRefreshToken(rt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if claims.Pwe != 0 {
+		t.Fatalf("pwe = %d, want 0（旧格式平滑兼容）", claims.Pwe)
+	}
+}
