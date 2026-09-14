@@ -112,7 +112,7 @@ func TestRefreshTokenPweRoundtrip(t *testing.T) {
 func TestRefreshTokenLegacyFormatPweZero(t *testing.T) {
 	// 手工构造无 pwe 字段的旧格式 RT（v0.2.x 时代签发形态）
 	m := NewManager(Config{Secret: "test-secret", AccessTTL: time.Minute})
-	rt, _, err := m.GenerateRefreshToken(7, "dev-1", time.Hour) // pwe=0 → omitempty 不落字段
+	rt, _, err := m.GenerateRefreshToken(7, "dev-1", time.Hour, 0) // pwe=0 → omitempty 不落字段（与 v0.2.x 无字段令牌解析等价）
 	if err != nil {
 		t.Fatal(err)
 	}
