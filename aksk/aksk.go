@@ -35,6 +35,7 @@ import (
 	"fmt"
 	"hash"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 )
@@ -125,7 +126,7 @@ func (v *Verifier) Verify(r *http.Request, body []byte) error {
 	}
 	stamp, err := time.Parse(time.RFC3339, ts)
 	if err != nil {
-		return fmt.Errorf("%w: bad ts %q", ErrBadHeader, ts)
+		return fmt.Errorf("%w: ts %q is not RFC3339", ErrBadHeader, ts)
 	}
 	now := time.Now
 	if v.Now != nil {
@@ -143,8 +144,12 @@ func (v *Verifier) Verify(r *http.Request, body []byte) error {
 		r.Header.Get(HeaderXRequestID), r.Header.Get(HeaderXOperator),
 	))
 	got, err := hex.DecodeString(sig)
-	if err != nil || subtle.ConstantTimeCompare(got, want) != 1 {
-		return ErrBadSignature
+	if err != nil {
+		// 非 hex 的 Signature 是头格式问题，与「密钥对不上」区分开
+		return fmt.Errorf("%w: signature %q is not hex", ErrBadHeader, sig)
+	}
+	if subtle.ConstantTimeCompare(got, want) != 1 {
+		return fmt.Errorf("%w (ak=%s)", ErrBadSignature, ak)
 	}
 	return nil
 }
@@ -169,16 +174,17 @@ func signature(sk, canonicalString []byte) []byte {
 	return mac.Sum(nil)
 }
 
-// parseAuth 解析 "HMAC Credential=<ak>, Ts=<ts>, Signature=<sig>"。
+// parseAuth 解析 "HMAC Credential=<ak>, Ts=<ts>, Signature=<sig>"，
+// 各失败原因写进错误消息（scheme 不符 / 字段非 key=value / 缺哪些字段）。
 func parseAuth(h string) (ak, ts, sig string, err error) {
 	rest, ok := strings.CutPrefix(h, scheme+" ")
 	if !ok {
-		return "", "", "", ErrBadHeader
+		return "", "", "", fmt.Errorf("%w: want scheme %q", ErrBadHeader, scheme)
 	}
 	for _, part := range strings.Split(rest, ",") {
 		k, v, ok := strings.Cut(strings.TrimSpace(part), "=")
 		if !ok {
-			return "", "", "", ErrBadHeader
+			return "", "", "", fmt.Errorf("%w: field %q is not key=value", ErrBadHeader, part)
 		}
 		switch k {
 		case "Credential":
@@ -189,8 +195,15 @@ func parseAuth(h string) (ak, ts, sig string, err error) {
 			sig = v
 		}
 	}
-	if ak == "" || ts == "" || sig == "" {
-		return "", "", "", ErrBadHeader
+	var missing []string
+	for name, v := range map[string]string{"Credential": ak, "Ts": ts, "Signature": sig} {
+		if v == "" {
+			missing = append(missing, name)
+		}
+	}
+	if len(missing) > 0 {
+		sort.Strings(missing)
+		return "", "", "", fmt.Errorf("%w: missing %s", ErrBadHeader, strings.Join(missing, "/"))
 	}
 	return ak, ts, sig, nil
 }

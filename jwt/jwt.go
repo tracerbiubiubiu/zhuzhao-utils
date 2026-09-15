@@ -38,8 +38,8 @@ type AccessClaims struct {
 
 // RefreshClaims refreshToken 的 payload
 type RefreshClaims struct {
-	UserID    int64  `json:"uid,string"`
-	DeviceID  string `json:"device_id"`
+	UserID   int64  `json:"uid,string"`
+	DeviceID string `json:"device_id"`
 	// Pwe 密码纪元（password epoch，可选）：签发时调用方注入当前纪元值；
 	// 改密/重置后调用方 INCR 纪元，Refresh 比对不一致即拒——密码重置吊销
 	// 与并发 Refresh 的 TOCTOU 防线。旧令牌无此字段解析为 0，纪元从 0 起平滑兼容。

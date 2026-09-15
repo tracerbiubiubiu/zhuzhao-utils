@@ -2,6 +2,7 @@ package aksk
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -49,7 +50,7 @@ func TestVerifyErrors(t *testing.T) {
 		wrong := base
 		wrong.SK = []byte("sk-other")
 		req := signedRequest(t, http.MethodPost, "/v1/tasks", body, wrong)
-		if err := v.Verify(req, body); err != ErrBadSignature {
+		if err := v.Verify(req, body); !errors.Is(err, ErrBadSignature) {
 			t.Fatalf("want ErrBadSignature, got %v", err)
 		}
 	})
@@ -61,14 +62,14 @@ func TestVerifyErrors(t *testing.T) {
 	})
 	t.Run("tampered body", func(t *testing.T) {
 		req := signedRequest(t, http.MethodPost, "/v1/tasks", body, base)
-		if err := v.Verify(req, []byte(`{"x":1}`)); err != ErrBadSignature {
+		if err := v.Verify(req, []byte(`{"x":1}`)); !errors.Is(err, ErrBadSignature) {
 			t.Fatalf("want ErrBadSignature, got %v", err)
 		}
 	})
 	t.Run("tampered operator header", func(t *testing.T) {
 		req := signedRequest(t, http.MethodPost, "/v1/tasks", body, base)
 		req.Header.Set(HeaderXOperator, "99999") // 篡改身份断言必须失配
-		if err := v.Verify(req, body); err != ErrBadSignature {
+		if err := v.Verify(req, body); !errors.Is(err, ErrBadSignature) {
 			t.Fatalf("want ErrBadSignature, got %v", err)
 		}
 	})
@@ -76,14 +77,14 @@ func TestVerifyErrors(t *testing.T) {
 		req := signedRequest(t, http.MethodPost, "/v1/tasks", body,
 			SignOptions{AK: "zhuzhao", SK: testKeys["zhuzhao"], RequestID: "req-1"})
 		req.Header.Set(HeaderXRequestID, "req-2")
-		if err := v.Verify(req, body); err != ErrBadSignature {
+		if err := v.Verify(req, body); !errors.Is(err, ErrBadSignature) {
 			t.Fatalf("want ErrBadSignature, got %v", err)
 		}
 	})
 	t.Run("method mismatch", func(t *testing.T) {
 		req := signedRequest(t, http.MethodPost, "/v1/tasks", body, base)
 		req.Method = http.MethodPut // 签名后改方法
-		if err := v.Verify(req, body); err != ErrBadSignature {
+		if err := v.Verify(req, body); !errors.Is(err, ErrBadSignature) {
 			t.Fatalf("want ErrBadSignature, got %v", err)
 		}
 	})
@@ -104,8 +105,50 @@ func TestVerifyErrors(t *testing.T) {
 	t.Run("malformed header", func(t *testing.T) {
 		req, _ := http.NewRequest(http.MethodPost, "/v1/tasks", nil)
 		req.Header.Set(HeaderAuthorization, "Bearer abc")
-		if err := v.Verify(req, nil); err != ErrBadHeader {
+		if err := v.Verify(req, nil); !errors.Is(err, ErrBadHeader) {
 			t.Fatalf("want ErrBadHeader, got %v", err)
+		}
+	})
+	t.Run("malformed header messages identify the cause", func(t *testing.T) {
+		cases := []struct {
+			name, header, wantSub string
+		}{
+			{"wrong scheme", "Bearer abc", `want scheme "HMAC"`},
+			{"missing fields", "HMAC Credential=zhuzhao", "missing Signature/Ts"},
+			{"non key=value field", "HMAC Credential zhuzhao, Ts=x, Signature=y", `field "Credential zhuzhao" is not key=value`},
+			{"bad ts", "HMAC Credential=zhuzhao, Ts=not-a-time, Signature=ab", "is not RFC3339"},
+		}
+		for _, tc := range cases {
+			req, _ := http.NewRequest(http.MethodPost, "/v1/tasks", nil)
+			req.Header.Set(HeaderAuthorization, tc.header)
+			err := v.Verify(req, nil)
+			if !errors.Is(err, ErrBadHeader) {
+				t.Errorf("%s: want ErrBadHeader, got %v", tc.name, err)
+				continue
+			}
+			if !strings.Contains(err.Error(), tc.wantSub) {
+				t.Errorf("%s: message %q lacks %q", tc.name, err.Error(), tc.wantSub)
+			}
+		}
+	})
+	t.Run("non-hex signature", func(t *testing.T) {
+		// 用当前时间，确保先通过时间窗检查、到达签名 hex 解码
+		ts := time.Now().UTC().Format(time.RFC3339)
+		req, _ := http.NewRequest(http.MethodPost, "/v1/tasks", nil)
+		req.Header.Set(HeaderAuthorization, "HMAC Credential=zhuzhao, Ts="+ts+", Signature=xyz")
+		err := v.Verify(req, nil)
+		if !errors.Is(err, ErrBadHeader) || !strings.Contains(err.Error(), "is not hex") {
+			t.Fatalf("want ErrBadHeader(not hex), got %v", err)
+		}
+	})
+	t.Run("signature mismatch error identifies the ak", func(t *testing.T) {
+		req := signedRequest(t, http.MethodPost, "/v1/tasks", body, SignOptions{AK: "zhuzhao", SK: []byte("sk-other")})
+		err := v.Verify(req, body)
+		if !errors.Is(err, ErrBadSignature) {
+			t.Fatalf("want ErrBadSignature, got %v", err)
+		}
+		if !strings.Contains(err.Error(), "ak=zhuzhao") {
+			t.Fatalf("message %q should identify ak", err.Error())
 		}
 	})
 }

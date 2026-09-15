@@ -77,12 +77,22 @@ func fail(c *gin.Context, err error, onFail func(c *gin.Context, err error)) {
 		c.Abort()
 		return
 	}
-	status, code, msg := http.StatusUnauthorized, 10002, "未授权"
+	// message 按失败原因区分，便于服务端日志/客户端排障一眼定位；
+	// detail 保留底层错误的完整上下文（含 AK、Ts 等现场信息）。
+	status, code, msg := http.StatusUnauthorized, 10002, "未授权：缺少签名头"
 	switch {
 	case errors.Is(err, ErrBodyTooLarge):
 		status, code, msg = http.StatusRequestEntityTooLarge, 10001, "请求体过大"
 	case errors.Is(err, ErrBodyRead):
 		status, code, msg = http.StatusBadRequest, 10001, "请求体读取失败"
+	case errors.Is(err, ErrBadHeader):
+		msg = "未授权：签名头格式错误"
+	case errors.Is(err, ErrUnknownCredential):
+		msg = "未授权：未知凭据"
+	case errors.Is(err, ErrExpired):
+		msg = "未授权：签名已过期"
+	case errors.Is(err, ErrBadSignature):
+		msg = "未授权：签名不匹配"
 	}
 	c.AbortWithStatusJSON(status, gin.H{"code": code, "message": msg, "detail": err.Error()})
 }
