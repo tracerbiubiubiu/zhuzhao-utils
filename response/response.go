@@ -120,12 +120,12 @@ func TooManyRequests(c *gin.Context, err *errcode.Error) {
 
 // NotFound 资源不存在
 func NotFound(c *gin.Context, message string) {
-	Fail(c, http.StatusNotFound, 10004, message)
+	Fail(c, http.StatusNotFound, errcode.ErrNotFound.Code, message)
 }
 
 // Conflict 冲突
 func Conflict(c *gin.Context, message string) {
-	Fail(c, http.StatusConflict, 10005, message)
+	Fail(c, http.StatusConflict, errcode.ErrConflict.Code, message)
 }
 
 // InternalError 内部错误

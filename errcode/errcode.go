@@ -11,7 +11,10 @@ func (e *Error) Error() string {
 }
 
 // New 创建业务错误。各业务系统在本包之外用 New 定义自己的错误码段，
-// 避免码值冲突：通用段 10000-10999 归本包，20000 起按模块分段留给业务侧。
+// 避免码值冲突：通用段 10000-10999 归本包，20000 起按模块分段留给业务侧；
+// 跨服务（独立部署子服务）自有错误码使用 100000-109999 段（activelist=100000-100999、
+// taskrunner=101000-101999 预留未启用），通用语义错误复用 10000 段现有码。
+// 段位规划 SSOT：zhuzhao 仓 docs/standards.md §3。
 func New(code int, message string) *Error {
 	return &Error{Code: code, Message: message}
 }

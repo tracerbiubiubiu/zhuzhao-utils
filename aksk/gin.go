@@ -79,6 +79,9 @@ func fail(c *gin.Context, err error, onFail func(c *gin.Context, err error)) {
 	}
 	// message 按失败原因区分，便于服务端日志/客户端排障一眼定位；
 	// detail 保留底层错误的完整上下文（含 AK、Ts 等现场信息）。
+	// 信封豁免注记（2026-09-15 审计）：默认失败体 {code,message,detail} 有别于
+	// response 统一信封四字段（{code,message,data,request_id}）——本包刻意零依赖
+	// 不 import response，且 detail 为排障现场；需完全同构时调用方自传 onFail。
 	status, code, msg := http.StatusUnauthorized, 10002, "未授权：缺少签名头"
 	switch {
 	case errors.Is(err, ErrBodyTooLarge):

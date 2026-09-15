@@ -39,11 +39,11 @@ import (
 ```go
 // 出站签名（客户端侧）：Transport 在请求克隆上签名，不改调用方 request
 client := &http.Client{Transport: &aksk.Transport{
-    AK: "zhuzhao", SK: []byte(os.Getenv("ZHuzhao_SK")),
+    AK: "zhuzhao", SK: []byte(os.Getenv("ZHUZHAO_SK")),
     Base: http.DefaultTransport,
 }}
 // 服务端验签（被调侧）：密钥环 = 预期调用方 AK→SK（空 SK 条目视同未知凭据）
-v := aksk.NewVerifier(map[string][]byte{"zhuzhao": []byte(sk)})
+v := &aksk.Verifier{Keys: map[string][]byte{"zhuzhao": []byte(sk)}}
 r.Use(aksk.GinMiddleware(v))
 ```
 
