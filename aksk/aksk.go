@@ -34,6 +34,7 @@ import (
 	"errors"
 	"fmt"
 	"hash"
+	"log/slog"
 	"net/http"
 	"sort"
 	"strings"
@@ -95,11 +96,15 @@ func Sign(req *http.Request, body []byte, opt SignOptions) {
 // Verifier 服务端验签器。Keys 为预期调用方的 AK → SK 映射（小密钥环）。
 // MaxSkew 零值取 DefaultMaxSkew；Now 可注入时钟（测试用）。
 // MaxBodyBytes 为 GinMiddleware 读体上限：零值取 DefaultMaxBodyBytes，负值不限制（不建议）。
+// Logger 为验签失败的排障日志出口（2026-09-16 统一批：失败现场落服务端日志，
+// 响应端不再回显 detail）；零值走 slog 默认（stderr），生产装配传入服务自身
+// slog 以并入统一日志文件。
 type Verifier struct {
 	Keys         map[string][]byte
 	MaxSkew      time.Duration
 	Now          func() time.Time
 	MaxBodyBytes int64
+	Logger       *slog.Logger
 }
 
 func (v *Verifier) maxBody() int64 {
@@ -152,6 +157,17 @@ func (v *Verifier) Verify(r *http.Request, body []byte) error {
 		return fmt.Errorf("%w (ak=%s)", ErrBadSignature, ak)
 	}
 	return nil
+}
+
+// CredentialOf 从 Authorization 头解析调用方 AK（Credential），格式不符返回空串。
+// GinMiddleware 验签通过后已自动将 AK 写入 gin context "caller"；非 gin 场景
+// 或自建中间件用本函数读取。
+func CredentialOf(r *http.Request) string {
+	ak, _, _, err := parseAuth(r.Header.Get(HeaderAuthorization))
+	if err != nil {
+		return ""
+	}
+	return ak
 }
 
 // canonical 组装待签名串。requestID / operator 与请求头中的值一致（可能为空串）。

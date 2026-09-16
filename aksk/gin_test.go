@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -117,6 +119,63 @@ func TestGinMiddleware_ReadErrorSurfaced(t *testing.T) {
 	r2.ServeHTTP(w2, req2)
 	if w2.Code != http.StatusBadRequest {
 		t.Fatalf("default onFail: want 400, got %d", w2.Code)
+	}
+}
+
+// 验签通过后自动写入归因键 caller / operator（生态统一，服务端不再自行解析）。
+func TestGinMiddleware_Attribution(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	var caller, operator string
+	handler := func(c *gin.Context) {
+		caller = c.GetString("caller")
+		operator = c.GetString("operator")
+		c.Status(200)
+	}
+	r := gin.New()
+	r.POST("/x", GinMiddleware(&Verifier{Keys: testKeys}, nil), handler)
+
+	// 带 X-Operator：原样透传
+	body := []byte(`{}`)
+	req := httptest.NewRequest(http.MethodPost, "/x", bytes.NewReader(body))
+	Sign(req, body, SignOptions{AK: "zhuzhao", SK: testKeys["zhuzhao"], Operator: "10086"})
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != 200 {
+		t.Fatalf("want 200, got %d", w.Code)
+	}
+	if caller != "zhuzhao" {
+		t.Fatalf("caller = %q, want zhuzhao", caller)
+	}
+	if operator != "10086" {
+		t.Fatalf("operator = %q, want 10086", operator)
+	}
+
+	// 缺 X-Operator：兜底 system（§9 口径）
+	req2 := httptest.NewRequest(http.MethodPost, "/x", bytes.NewReader(body))
+	Sign(req2, body, SignOptions{AK: "zhuzhao", SK: testKeys["zhuzhao"]})
+	w2 := httptest.NewRecorder()
+	r.ServeHTTP(w2, req2)
+	if operator != "system" {
+		t.Fatalf("operator fallback = %q, want system", operator)
+	}
+}
+
+// 验签失败现场经 Verifier.Logger 落服务端日志（响应端 detail 的替代排障通道）。
+func TestGinMiddleware_FailLogged(t *testing.T) {
+	var buf bytes.Buffer
+	lg := slog.New(slog.NewTextHandler(&buf, nil))
+	gin.SetMode(gin.TestMode)
+	r := gin.New()
+	r.POST("/x", GinMiddleware(&Verifier{Keys: testKeys, Logger: lg}, nil), func(c *gin.Context) { c.Status(200) })
+	req := httptest.NewRequest(http.MethodPost, "/x", bytes.NewReader([]byte(`{}`)))
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("want 401, got %d", w.Code)
+	}
+	logged := buf.String()
+	if !strings.Contains(logged, "verify failed") || !strings.Contains(logged, "missing Authorization") {
+		t.Fatalf("verify failure not logged, log = %q", logged)
 	}
 }
 

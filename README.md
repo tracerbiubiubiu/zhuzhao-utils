@@ -42,9 +42,11 @@ client := &http.Client{Transport: &aksk.Transport{
     AK: "zhuzhao", SK: []byte(os.Getenv("ZHUZHAO_SK")),
     Base: http.DefaultTransport,
 }}
-// 服务端验签（被调侧）：密钥环 = 预期调用方 AK→SK（空 SK 条目视同未知凭据）
-v := &aksk.Verifier{Keys: map[string][]byte{"zhuzhao": []byte(sk)}}
-r.Use(aksk.GinMiddleware(v))
+// 服务端验签（被调侧）：密钥环 = 预期调用方 AK→SK（空 SK 条目视同未知凭据）。
+// 验签通过后自动写入 gin context 归因键 caller（调用方 AK）/ operator（X-Operator，
+// 缺省 "system"）；失败现场经 Verifier.Logger 落日志。
+v := &aksk.Verifier{Keys: map[string][]byte{"zhuzhao": []byte(sk)}, Logger: logger}
+r.Use(aksk.GinMiddleware(v, response.AKSKFail()))
 ```
 
 要点：canonical 覆盖 METHOD/PATH（空路径归一化 `/`）/body 哈希/TS/`X-Request-ID`/`X-Operator`；URL query 不入签（安全参数放 body）；TS ±5min 防重放；读体上限默认 8MB（`Verifier.MaxBodyBytes` 可调）。
