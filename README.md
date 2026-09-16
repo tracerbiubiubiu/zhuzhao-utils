@@ -21,10 +21,10 @@
 
 ## 使用
 
-要求 **zhuzhao-utils ≥ v0.2.0**（`aksk` 自 v0.2.0 起提供，v0.1.0 不含）：
+要求 **zhuzhao-utils ≥ v0.4.1**（本 README 示例口径；`aksk` 自 v0.2.0 起提供，v0.1.0 不含）：
 
 ```sh
-go get github.com/tracerbiubiubiu/zhuzhao-utils@v0.2.0
+go get github.com/tracerbiubiubiu/zhuzhao-utils@v0.4.1
 ```
 
 ```go
