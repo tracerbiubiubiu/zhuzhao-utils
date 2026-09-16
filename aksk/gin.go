@@ -19,9 +19,11 @@ const DefaultMaxBodyBytes int64 = 8 << 20
 
 // gin context 归因键（GinMiddleware 验签通过后写入；生态统一从这两键取归因，
 // 2026-09-16 服务间验签统一批收编——此前 taskrunner/activelist 各自实现）。
+// 导出常量供 handler 侧引用（c.GetString(aksk.ContextKeyCaller)），避免各服务
+// 硬编码字面量漂移；键值即 "caller" / "operator"，与既有取法兼容。
 const (
-	ctxKeyCaller   = "caller"
-	ctxKeyOperator = "operator"
+	ContextKeyCaller   = "caller"
+	ContextKeyOperator = "operator"
 )
 
 // 中间件读体阶段的错误（先于验签发生，与签名正误无关）。
@@ -59,8 +61,8 @@ func GinMiddleware(v *Verifier, onFail func(c *gin.Context, err error)) gin.Hand
 			fail(c, v, err, onFail)
 			return
 		}
-		c.Set(ctxKeyCaller, CredentialOf(c.Request))
-		c.Set(ctxKeyOperator, operatorOf(c.Request))
+		c.Set(ContextKeyCaller, CredentialOf(c.Request))
+		c.Set(ContextKeyOperator, operatorOf(c.Request))
 		c.Next()
 	}
 }

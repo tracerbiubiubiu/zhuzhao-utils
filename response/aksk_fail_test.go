@@ -27,7 +27,7 @@ func TestAKSKFail(t *testing.T) {
 		{"body too large", aksk.ErrBodyTooLarge, http.StatusRequestEntityTooLarge, 10001, "读体上限"},
 		{"body read", aksk.ErrBodyRead, http.StatusBadRequest, 10001, "读取失败"},
 		{"missing header", aksk.ErrMissingHeader, http.StatusUnauthorized, 10002, "缺少 Authorization"},
-		{"bad header", aksk.ErrBadHeader, http.StatusUnauthorized, 10002, "格式错误"},
+		{"bad header", aksk.ErrBadHeader, http.StatusUnauthorized, 10002, "格式错误，应为：HMAC Credential=<AK>, Ts=<RFC3339时间>, Signature=<hex签名>"},
 		{"unknown credential", fmt.Errorf("%w: zhuzhao", aksk.ErrUnknownCredential), http.StatusUnauthorized, 10002, "未登记或已停用"},
 		{"expired", aksk.ErrExpired, http.StatusUnauthorized, 10002, "时间窗口"},
 		{"bad signature", aksk.ErrBadSignature, http.StatusUnauthorized, 10002, "签名校验失败"},

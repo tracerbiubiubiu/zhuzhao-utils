@@ -127,8 +127,8 @@ func TestGinMiddleware_Attribution(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	var caller, operator string
 	handler := func(c *gin.Context) {
-		caller = c.GetString("caller")
-		operator = c.GetString("operator")
+		caller = c.GetString(ContextKeyCaller)
+		operator = c.GetString(ContextKeyOperator)
 		c.Status(200)
 	}
 	r := gin.New()

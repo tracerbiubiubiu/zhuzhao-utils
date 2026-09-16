@@ -26,7 +26,7 @@ func AKSKFail() func(c *gin.Context, err error) {
 		case errors.Is(err, aksk.ErrMissingHeader):
 			Unauthorized(c, "缺少 Authorization 认证头，请使用 AK/SK 签名后重试")
 		case errors.Is(err, aksk.ErrBadHeader):
-			Unauthorized(c, "Authorization 头格式错误，应为：HMAC Credential=<AK>,Ts=<RFC3339时间>,Sig=<签名>")
+			Unauthorized(c, "Authorization 头格式错误，应为：HMAC Credential=<AK>, Ts=<RFC3339时间>, Signature=<hex签名>")
 		case errors.Is(err, aksk.ErrUnknownCredential):
 			Unauthorized(c, "访问凭证（AK）未登记或已停用，请联系管理员开通")
 		case errors.Is(err, aksk.ErrExpired):
