@@ -2,6 +2,10 @@
 
 后台服务通用工具库，从 [zhuzhao](https://github.com/tracerbiubiubiu/zhuzhao) 的 `internal/pkg` 抽取而来。
 
+## 生态角色
+
+zhuzhao 生态（[zhuzhao](https://github.com/tracerbiubiubiu/zhuzhao) IAM+网关 / [taskrunner](https://github.com/tracerbiubiubiu/taskrunner) 任务总线 / [activelist](https://github.com/tracerbiubiubiu/activelist) 动态数据）的公共底座：语义化版本发版，消费方 pin 去 replace（临时 replace 仅限联调窗口）。抽取边界 = 只抽无数据依赖的纯工具；工程公约 SSOT 见 zhuzhao 仓 `docs/standards.md`（§5 公共包）。
+
 ## 包一览
 
 | 包 | 用途 |
@@ -54,6 +58,25 @@ r.Use(aksk.GinMiddleware(v, response.AKSKFail()))
 > 版本注记：`Verifier.Logger` 与 `response.AKSKFail()` 自 **v0.4.0** 起；归因键常量 `aksk.ContextKeyCaller`/`aksk.ContextKeyOperator`（消费方取 gin context 归因时引用，禁裸字符串）及 AKSKFail 格式提示修正自 **v0.4.1** 起，**以发布 tag 为准 pin**。
 
 各基建包（`logger` / `postgres` / `redis` / `jwt`）自带 `Config` 结构体，零值字段取安全默认值，不绑定任何配置框架；由调用方把自己（viper / yaml / env）的配置映射进来。
+
+## 开发
+
+```sh
+make lint    # vet + gofmt 漂移检查 + test
+make test    # go test ./...
+make build   # go build ./...
+```
+
+CI（GitHub Actions）：push(main / tag `v*`) + PR → vet + gofmt + test -race。
+
+## 版本历史
+
+| 版本 | 增量 |
+|---|---|
+| v0.4.1 | 归因键常量 `ContextKeyCaller/ContextKeyOperator` + AKSKFail 文案修正（头字段名 Signature=） |
+| v0.4.0 | 验签统一批：`Verifier.Logger` 验签失败日志、`GinMiddleware` 归因键收编（caller/operator 写入 gin context）、`response.AKSKFail()` 标准 onFail |
+| v0.3.0 | `RefreshClaims.Pwe`（密码纪元防令牌存活越权） |
+| v0.2.0 | `aksk` 包：服务间 AK/SK HMAC 签名/验签（Sign/Verifier/GinMiddleware/Transport） |
 
 ## License
 
