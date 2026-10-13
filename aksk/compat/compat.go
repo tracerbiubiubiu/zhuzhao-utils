@@ -23,8 +23,10 @@
 //
 // bodyhash 验签语义：主路径恒按复算派（base64(sha256(TrimSpace(body)))，body
 // 完整性在签名覆盖内，x-auth-body-hash 头仅由签名侧写出、验签侧不消费——与
-// 对端当前版服务端一致）；另兼容旧版空体签名（待签 bodyhash 为 ""），仅当实际
-// body（trim 后）为空时接受——空签名不可携带任意体重放。
+// 对端当前版服务端一致）；另兼容存量 skipBody 形态签名（待签 bodyhash 为 ""）：
+// 默认仅当 body（trim 后）真空时接受——空签名不可携带任意体重放；Verifier
+// .SkipBody=true（对端 Config.SkipBody 同名同语义）后无条件接受，body 完整性
+// 让渡由开关持有方知情承担。
 package compat
 
 import (
@@ -106,6 +108,13 @@ type Verifier struct {
 	Now          func() time.Time
 	MaxBodyBytes int64
 	Logger       *slog.Logger
+
+	// SkipBody 兼容对端存量开关（对端中间件 Config.SkipBody 同名同语义）：
+	// true = 额外接受签名覆盖 bodyhash 为 "" 的请求（body 不在签名覆盖内，
+	// 存量 skipBody 客户端形态）；默认 false 仅 body 恒入签（"" 候选限真空体）。
+	// 开启即让渡 body 完整性——截获的一条空签名可在窗口内携带任意体重放，
+	// 须限定专用路由组并知情接受；抓包确认存量流量确有此形态后再开。
+	SkipBody bool
 }
 
 func (v *Verifier) maxBody() int64 {
@@ -151,7 +160,7 @@ func (v *Verifier) Verify(r *http.Request, body []byte) error {
 	if len(got) == 0 {
 		return fmt.Errorf("%w: not base64/hex", ErrBadSignature)
 	}
-	for _, candidate := range sigCandidates(body) {
+	for _, candidate := range v.sigCandidates(body) {
 		for _, mac := range got {
 			if hmac.Equal(mac, hmacSum(sk, ak, ts, candidate)) {
 				return nil
@@ -161,10 +170,12 @@ func (v *Verifier) Verify(r *http.Request, body []byte) error {
 	return fmt.Errorf("%w (ak=%s)", ErrBadSignature, ak)
 }
 
-// sigCandidates 返回验签候选：①复算派 bodyhash（主路径）②""（旧版空体签名，
-// 仅当 body trim 后为空——防空签名携带任意体重放）。
-func sigCandidates(body []byte) []string {
-	if len(bytes.TrimSpace(body)) == 0 {
+// sigCandidates 返回验签候选：①复算派 bodyhash（主路径，body 恒入签）②""
+// （存量 skipBody 形态签名）。默认仅真空体接受 ②（空签名无法携带 payload
+// 重放）；Verifier.SkipBody=true 后 ② 无条件参与——body 完整性让渡由开关
+// 持有方知情承担。
+func (v *Verifier) sigCandidates(body []byte) []string {
+	if v.SkipBody || len(bytes.TrimSpace(body)) == 0 {
 		return []string{bodyHashOf(body), ""}
 	}
 	return []string{bodyHashOf(body)}

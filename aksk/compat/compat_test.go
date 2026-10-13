@@ -128,6 +128,26 @@ func TestVerify_KnownLimitation_NoMethodPathBinding(t *testing.T) {
 	}
 }
 
+// SkipBody 开关（对端 Config.SkipBody 同名同语义）：默认关闭——非空 body 的
+// ""签名拒绝（防空签名携带 payload 重放）；显式开启后接受（存量 skipBody
+// 客户端形态，body 让渡由开关持有方知情承担）。
+func TestVerify_SkipBodySwitch(t *testing.T) {
+	req := signedRequest("POST", "/ingest", vecBody, vecSigEmpty, false)
+	if err := testVerifier(vecAt).Verify(req, vecBody); !errors.Is(err, ErrBadSignature) {
+		t.Fatalf("default SkipBody=false must reject unsigned body, got %v", err)
+	}
+	v := testVerifier(vecAt)
+	v.SkipBody = true
+	if err := v.Verify(req, vecBody); err != nil {
+		t.Fatalf("SkipBody=true must accept legacy skipBody signature: %v", err)
+	}
+	// 开启后主路径（复算派签名）不受影响
+	reqMain := signedRequest("POST", "/ingest", vecBody, vecSig, true)
+	if err := v.Verify(reqMain, vecBody); err != nil {
+		t.Fatalf("SkipBody=true must keep recompute path: %v", err)
+	}
+}
+
 // 对端可配 hex 编码：签名以 hex 承载同一定时结果时应可通过。
 func TestVerify_HexEncodingFallback(t *testing.T) {
 	sig := hex.EncodeToString(hmacSum(vecSK, vecAK, vecTS, vecHash))
