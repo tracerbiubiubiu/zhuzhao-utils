@@ -20,6 +20,7 @@ zhuzhao 生态（[zhuzhao](https://github.com/tracerbiubiubiu/zhuzhao) IAM+网�
 | `redis` | go-redis 客户端构建器 + 登录失败锁定器（Lua 原子脚本） |
 | `jwt` | HS256 双令牌（access / refresh）签发与解析，typ 声明防令牌混淆 |
 | `aksk` | ✅ **已实现（2026-09-04）**：服务间 AK/SK HMAC-SHA256 签名/验签——`Sign` 出站签名 + `Verifier` 验签 + `GinMiddleware` 服务端中间件 + `Transport` 出站 RoundTripper 自动签名；canonical = METHOD\nPATH\nsha256(body)\nTS\nX-Request-ID\nX-Operator（可选头入签名覆盖即不可篡改；**PATH 空路径归一化为 `/`**——自实现签名侧必须同样处理，否则根路径验签必失配）；常量时间比较 + ±5min 时间窗防重放。**边界**：URL query 不入签（API 约定 POST 业务参数放 body、GET query 不受完整性保护）；中间件读体上限默认 8MB（`Verifier.MaxBodyBytes`），缺头先拒不读体，读体失败/超限与验签失败分开报错（400/413 vs 401）；`Transport` 在请求克隆上签名，不修改调用方 request。设计 SSOT = zhuzhao `docs/phase3/16-external-integration.md` §9；首个消费者 = taskrunner C2/C9、activelist M-A6、zhuzhao E-②/E-④/批次 B |
+| `aksk/compat` | ✅ **已实现（2026-10-13）**：存量框架 `x-auth-*` 协议兼容层（**独立重实现，不引原库**，与 `aksk` 包零耦合）——`Sign`/`Verifier`/`GinMiddleware`，签名/验签/中间件形态与 `aksk` 对齐；线协议以包内测试冻结向量为准（向量由存量实现现场生成并经其服务端校验器反向验证 + 双向交叉验证四方向 PASS）。我方端补强：±5min 时间窗（存量不校验）/恒时比较/读体上限 8MB/空 SK fail-closed/caller=AK 归因（**存量协议无 operator 头，归因仅 caller**，与内部 caller+operator 双键口径不同）；默认响应码值对齐内部（读体 10001/鉴权 10002），分档文案经 `onFail` 传自定义实现。**已知让渡**：签名不覆盖 method/path（跨端点重放由部署纪律承接——**兼容中间件只挂专用路由组**，standards §3.11 登记豁免）、防重放仅时间窗无 nonce（窗口内由业务幂等承接）。出处与翻案决策 = zhuzhao `docs/acknowledgments.md`、phase1/02-auth §存量迁移追记 |
 
 各包相互独立（`response` 依赖 `errcode` 除外），按需引用，不会带入无关依赖。
 
@@ -73,6 +74,7 @@ CI（GitHub Actions）：push(main / tag `v*`) + PR → vet + gofmt + test -race
 
 | 版本 | 增量 |
 |---|---|
+| v0.4.2（待发，未打标） | `aksk/compat` 包：存量框架 `x-auth-*` 协议兼容层（签名/验签/中间件，独立重实现；挂载待目标服务） |
 | v0.4.1 | 归因键常量 `ContextKeyCaller/ContextKeyOperator` + AKSKFail 文案修正（头字段名 Signature=） |
 | v0.4.0 | 验签统一批：`Verifier.Logger` 验签失败日志、`GinMiddleware` 归因键收编（caller/operator 写入 gin context）、`response.AKSKFail()` 标准 onFail |
 | v0.3.0 | `RefreshClaims.Pwe`（密码纪元防令牌存活越权） |

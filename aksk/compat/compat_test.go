@@ -6,6 +6,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"sort"
 	"strings"
@@ -102,20 +103,8 @@ func TestVerify_Failures(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := testVerifier(tc.now).Verify(tc.req, tc.body)
-			if err == nil {
-				t.Fatal("want error, got nil")
-			}
-			// 门内错误以 sentinel 判定（errors.Is 语义经 %w 包装保持）
-			sentinel := tc.want
-			match := false
-			for _, s := range []error{ErrBadSignature, ErrUnknownCredential, ErrMissingHeader, ErrBadHeader, ErrExpired} {
-				if sentinel == s && strings.HasPrefix(err.Error(), s.Error()) {
-					match = true
-				}
-			}
-			if !match {
-				t.Fatalf("want %v-family, got %v", tc.want, err)
+			if err := testVerifier(tc.now).Verify(tc.req, tc.body); !errors.Is(err, tc.want) {
+				t.Fatalf("want %v family, got %v", tc.want, err)
 			}
 		})
 	}
@@ -124,8 +113,18 @@ func TestVerify_Failures(t *testing.T) {
 func TestVerify_EmptySKEntryIsUnknown(t *testing.T) {
 	v := &Verifier{Keys: map[string][]byte{vecAK: {}}, Now: func() time.Time { return vecAt }}
 	req := signedRequest("POST", "/ingest", vecBody, vecSig, true)
-	if err := v.Verify(req, vecBody); err == nil || !strings.HasPrefix(err.Error(), ErrUnknownCredential.Error()) {
+	if err := v.Verify(req, vecBody); !errors.Is(err, ErrUnknownCredential) {
 		t.Fatalf("empty SK must be rejected as unknown credential, got %v", err)
+	}
+}
+
+// 已知让渡（测试钉住防误解）：存量协议签名不覆盖 method/path——同一签名换
+// 路径/换方法仍可通过。完整性边界由部署纪律承接（兼容中间件只挂专用路由组，
+// 见包注释与 standards §3.11 豁免），非本包机制。
+func TestVerify_KnownLimitation_NoMethodPathBinding(t *testing.T) {
+	req := signedRequest("GET", "/other/endpoint", vecBody, vecSig, true)
+	if err := testVerifier(vecAt).Verify(req, vecBody); err != nil {
+		t.Fatalf("cross-endpoint replay must pass (known limitation, pinned by design): %v", err)
 	}
 }
 

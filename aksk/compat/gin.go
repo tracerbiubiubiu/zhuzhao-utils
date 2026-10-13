@@ -67,6 +67,9 @@ func readBody(c *gin.Context, limit int64) ([]byte, error) {
 	}
 	body := bytes.TrimSpace(raw)
 	c.Request.Body = io.NopCloser(bytes.NewReader(body))
+	// trim 改变了体长，同步 ContentLength（下游按长度读取/转发代理才不会错位；
+	// 内部 aksk 不 trim 故无此步）
+	c.Request.ContentLength = int64(len(body))
 	return body, nil
 }
 
@@ -83,11 +86,14 @@ func fail(c *gin.Context, v *Verifier, err error, onFail func(c *gin.Context, er
 		c.Abort()
 		return
 	}
-	status := http.StatusUnauthorized
-	if errors.Is(err, ErrBodyTooLarge) {
-		status = http.StatusRequestEntityTooLarge
-	} else if errors.Is(err, ErrBodyRead) {
-		status = http.StatusBadRequest
+	// 默认响应码值与内部协议对齐（读体类 10001 / 鉴权类 10002）；分档文案按
+	// 生态标准做法经 onFail 传自定义实现（如内部 response.AKSKFail 形态）。
+	switch {
+	case errors.Is(err, ErrBodyTooLarge):
+		c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"code": 10001, "message": "请求体过大"})
+	case errors.Is(err, ErrBodyRead):
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": 10001, "message": "请求体读取失败"})
+	default:
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 10002, "message": "未授权：AK/SK 签名验证失败"})
 	}
-	c.AbortWithStatusJSON(status, gin.H{"code": 10002, "message": "未授权：AK/SK 签名验证失败"})
 }
