@@ -26,10 +26,10 @@ zhuzhao 生态（[zhuzhao](https://github.com/tracerbiubiubiu/zhuzhao) IAM+网�
 
 ## 使用
 
-要求 **zhuzhao-utils ≥ v0.4.1**（本 README 示例口径；`aksk` 自 v0.2.0 起提供，v0.1.0 不含）：
+要求 **zhuzhao-utils ≥ v0.4.2**（本 README 示例口径；`aksk` 自 v0.2.0 起提供，v0.1.0 不含；`aksk/compat` 自 v0.4.2 起提供）：
 
 ```sh
-go get github.com/tracerbiubiubiu/zhuzhao-utils@v0.4.1
+go get github.com/tracerbiubiubiu/zhuzhao-utils@v0.4.2
 ```
 
 ```go
@@ -74,7 +74,7 @@ CI（GitHub Actions）：push(main / tag `v*`) + PR → vet + gofmt + test -race
 
 | 版本 | 增量 |
 |---|---|
-| v0.4.2（待发，未打标） | `aksk/compat` 包：存量框架 `x-auth-*` 协议兼容层（签名/验签/中间件 + 出站自动签名 `Transport`，独立重实现；挂载待目标服务） |
+| v0.4.2 | `aksk/compat` 包：存量框架 `x-auth-*` 协议兼容层（签名/验签/中间件 + 出站自动签名 `Transport`，独立重实现；挂载待目标服务）；`jsonutil.Int64Slice` 补 `MarshalJSON`（发送侧 ID 数组一律字符串，配 nil→`[]` 数组恒不 null）；jwt `ParseRefreshToken` 过期错误包装 `ErrTokenExpired` 哨兵（errors.Is 可判）；postgres 移除 `MaxIdleConns` 口径误映射 |
 | v0.4.1 | 归因键常量 `ContextKeyCaller/ContextKeyOperator` + AKSKFail 文案修正（头字段名 Signature=） |
 | v0.4.0 | 验签统一批：`Verifier.Logger` 验签失败日志、`GinMiddleware` 归因键收编（caller/operator 写入 gin context）、`response.AKSKFail()` 标准 onFail |
 | v0.3.0 | `RefreshClaims.Pwe`（密码纪元防令牌存活越权） |
