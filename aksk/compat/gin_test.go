@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -96,6 +97,10 @@ func TestGinMiddleware_DefaultOnFail(t *testing.T) {
 			if tc.wantCd == http.StatusUnauthorized && !strings.Contains(w.Body.String(), "未授权") {
 				t.Fatalf("default body should carry unauthorized message, got %s", w.Body.String())
 			}
+			// 钉住：默认响应体为固定文案，不回显错误原文与签名材料
+			if strings.Contains(w.Body.String(), "compat:") || strings.Contains(w.Body.String(), vecSig) {
+				t.Fatalf("default body must not echo error text or signature material, got %s", w.Body.String())
+			}
 		})
 	}
 }
@@ -122,5 +127,26 @@ func TestGinMiddleware_CustomOnFail(t *testing.T) {
 	}
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("status = %d, want 403 from custom onFail", w.Code)
+	}
+}
+
+// 失败现场经 Verifier.Logger 落服务端日志（fail 路径实际使用注入的 Logger，
+// 而非恒走 slog 默认出口）；日志只记 method/path/err 文本，不落头值。
+func TestGinMiddleware_FailureLoggedViaVerifierLogger(t *testing.T) {
+	var buf bytes.Buffer
+	v := testVerifier(vecAt)
+	v.Logger = slog.New(slog.NewTextHandler(&buf, nil))
+	headers := map[string]string{
+		HeaderAccessKey: vecAK,
+		HeaderTimestamp: vecTS,
+		HeaderSignature: strings.Repeat("C", 44),
+	}
+	w := serveCompat(v, nil, headers, vecBody, func(c *gin.Context) { c.Status(http.StatusOK) })
+	if w.Code != http.StatusUnauthorized {
+		t.Fatalf("status = %d, want 401", w.Code)
+	}
+	logged := buf.String()
+	if !strings.Contains(logged, "compat: verify failed") || !strings.Contains(logged, "signature mismatch") {
+		t.Fatalf("verify failure not logged via Verifier.Logger, log = %q", logged)
 	}
 }

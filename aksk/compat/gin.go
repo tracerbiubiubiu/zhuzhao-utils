@@ -87,7 +87,10 @@ func fail(c *gin.Context, v *Verifier, err error, onFail func(c *gin.Context, er
 		return
 	}
 	// 默认响应码值与内部协议对齐（读体类 10001 / 鉴权类 10002）；分档文案按
-	// 生态标准做法经 onFail 传自定义实现（如内部 response.AKSKFail 形态）。
+	// 生态标准做法经 onFail 传自定义实现。注意：不可直接复用 response.AKSKFail——
+	// 其分档匹配 ../aksk 的哨兵，与本包 Err* 互不成立（errors.Is 恒 false），
+	// 照抄会把全部失败（含读体超限的 413）落到 401 默认档；自定义 onFail 须按
+	// 本包 Err* 分档。
 	switch {
 	case errors.Is(err, ErrBodyTooLarge):
 		c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"code": 10001, "message": "请求体过大"})

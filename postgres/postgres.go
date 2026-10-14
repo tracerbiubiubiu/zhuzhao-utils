@@ -19,7 +19,6 @@ type Config struct {
 	Password         string
 	DBName           string
 	MaxOpenConns     int
-	MaxIdleConns     int
 	ConnMaxLifetime  time.Duration
 	ConnMaxIdleTime  time.Duration
 	ConnectTimeout   time.Duration
@@ -33,9 +32,6 @@ type Config struct {
 func (c *Config) ApplyDefaults() {
 	if c.MaxOpenConns == 0 {
 		c.MaxOpenConns = 25
-	}
-	if c.MaxIdleConns == 0 {
-		c.MaxIdleConns = 5
 	}
 	if c.ConnMaxLifetime == 0 {
 		c.ConnMaxLifetime = time.Hour
@@ -75,7 +71,9 @@ func New(cfg Config) (*pgxpool.Pool, func(), error) {
 	}
 
 	poolConfig.MaxConns = int32(cfg.MaxOpenConns)
-	poolConfig.MinConns = int32(cfg.MaxIdleConns)
+	// 不设 MinConns（pgxpool 默认 0，空闲连接由 MaxConnIdleTime 回收）——
+	// pgxpool 无 MaxIdleConns 概念，勿把 database/sql 口径的空闲上限映射到
+	// MinConns（那是保活下限，语义相反）
 	poolConfig.MaxConnLifetime = cfg.ConnMaxLifetime
 	poolConfig.MaxConnIdleTime = cfg.ConnMaxIdleTime
 	poolConfig.ConnConfig.ConnectTimeout = cfg.ConnectTimeout

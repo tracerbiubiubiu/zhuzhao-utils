@@ -2,6 +2,7 @@ package jwt
 
 import (
 	"encoding/base64"
+	"errors"
 	"strings"
 	"testing"
 	"time"
@@ -62,6 +63,18 @@ func TestRefreshTokenRoundTrip(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, int64(42), claims.UserID)
 	assert.Equal(t, "device-1", claims.DeviceID)
+}
+
+// RT 过期与 AT 同口径包装为本包哨兵：errors.Is(err, ErrTokenExpired) 可判，
+// 上层对 AT/RT 统一映射「登录过期」分支（不得返回裸 golang-jwt 错误）。
+func TestParseRefreshToken_ExpiredWrapsSentinel(t *testing.T) {
+	m := newTestManager(t)
+	rt, _, err := m.GenerateRefreshToken(42, "device-1", -time.Minute, 0)
+	require.NoError(t, err)
+
+	_, err = m.ParseRefreshToken(rt)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrTokenExpired), "expired RT must wrap ErrTokenExpired, got %v", err)
 }
 
 // 密钥不符必须拒绝

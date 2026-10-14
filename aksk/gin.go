@@ -3,7 +3,6 @@ package aksk
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -155,11 +154,7 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 		}
 		_ = req.Body.Close()
 	}
-	ctx := req.Context()
-	if ctx == nil {
-		ctx = context.Background()
-	}
-	signed := req.Clone(ctx)
+	signed := req.Clone(req.Context())
 	signed.Body = io.NopCloser(bytes.NewReader(body))
 	opt := SignOptions{AK: t.AK, SK: t.SK}
 	if t.Operator != nil {

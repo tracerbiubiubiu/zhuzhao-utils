@@ -140,6 +140,11 @@ func (m *Manager) ParseRefreshToken(tokenString string) (*RefreshClaims, error) 
 		return m.secret, nil
 	})
 	if err != nil {
+		// 与 ParseAccessToken 同口径：过期错误包装为本包哨兵（errors.Is 可判），
+		// 上层对 AT/RT 统一映射「登录过期」分支，无需分别处理
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, fmt.Errorf("%w: %w", ErrTokenExpired, err)
+		}
 		return nil, err
 	}
 	claims, ok := token.Claims.(*RefreshClaims)
