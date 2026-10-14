@@ -2,9 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
     tags: ['v*']
   pull_request:
+
+# 连续 push 只跑最新提交（对齐 activelist/taskrunner 惯例）
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
