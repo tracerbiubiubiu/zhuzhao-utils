@@ -74,6 +74,7 @@ CI（GitHub Actions）：push(main / tag `v*`) + PR → vet + gofmt + test -race
 
 | 版本 | 增量 |
 |---|---|
+| v0.4.3（待发） | `aksk/gin.go`·`aksk/compat/gin.go` 默认响应码值改引 `errcode` 常量（wire 形态零变化）；**哨兵/构造错误消息补包名前缀（jwt/redis/postgres/jsonutil——⚠ 消费方可感变更**：按消息文本做的日志解析或断言需同步，`errors.Is` 判定不受影响）；crypto/errcode/logger 三包补测 + jwt AT 过期哨兵用例；README 依赖边界声明修正。驱动=2026-10-15 清欠批（zhuzhao review/11 §8 BK-25） |
 | v0.4.2 | `aksk/compat` 包：存量框架 `x-auth-*` 协议兼容层（签名/验签/中间件 + 出站自动签名 `Transport`，独立重实现；挂载待目标服务）；`jsonutil.Int64Slice` 补 `MarshalJSON`（发送侧 ID 数组一律字符串，配 nil→`[]` 数组恒不 null）；jwt `ParseRefreshToken` 过期错误包装 `ErrTokenExpired` 哨兵（errors.Is 可判）；postgres 移除 `MaxIdleConns` 口径误映射 |
 | v0.4.1 | 归因键常量 `ContextKeyCaller/ContextKeyOperator` + AKSKFail 文案修正（头字段名 Signature=） |
 | v0.4.0 | 验签统一批：`Verifier.Logger` 验签失败日志、`GinMiddleware` 归因键收编（caller/operator 写入 gin context）、`response.AKSKFail()` 标准 onFail |
