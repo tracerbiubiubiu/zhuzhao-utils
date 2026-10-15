@@ -67,7 +67,7 @@ func New(cfg Config) (*pgxpool.Pool, func(), error) {
 
 	poolConfig, err := pgxpool.ParseConfig(cfg.DSN())
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to parse database config: %w", err)
+		return nil, nil, fmt.Errorf("postgres: failed to parse database config: %w", err)
 	}
 
 	poolConfig.MaxConns = int32(cfg.MaxOpenConns)
@@ -97,7 +97,7 @@ func New(cfg Config) (*pgxpool.Pool, func(), error) {
 
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
-		return nil, nil, fmt.Errorf("failed to create connection pool: %w", err)
+		return nil, nil, fmt.Errorf("postgres: failed to create connection pool: %w", err)
 	}
 
 	// Ping 独立超时——若与建池共用 ConnectTimeout 的 ctx，DNS+TLS 慢时
@@ -106,7 +106,7 @@ func New(cfg Config) (*pgxpool.Pool, func(), error) {
 	defer pingCancel()
 	if err := pool.Ping(pingCtx); err != nil {
 		pool.Close()
-		return nil, nil, fmt.Errorf("failed to ping database: %w", err)
+		return nil, nil, fmt.Errorf("postgres: failed to ping database: %w", err)
 	}
 
 	cleanup := func() {

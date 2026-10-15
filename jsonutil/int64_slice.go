@@ -45,11 +45,11 @@ func (s *Int64Slice) UnmarshalJSON(data []byte) error {
 		}
 		var str string
 		if err := json.Unmarshal(item, &str); err != nil {
-			return fmt.Errorf("invalid int64 slice element: %w", err)
+			return fmt.Errorf("jsonutil: invalid int64 slice element: %w", err)
 		}
 		v, err := strconv.ParseInt(str, 10, 64)
 		if err != nil {
-			return fmt.Errorf("invalid int64 string %q: %w", str, err)
+			return fmt.Errorf("jsonutil: invalid int64 string %q: %w", str, err)
 		}
 		out = append(out, v)
 	}

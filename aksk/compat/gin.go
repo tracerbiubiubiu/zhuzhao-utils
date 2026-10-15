@@ -11,6 +11,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/tracerbiubiubiu/zhuzhao-utils/errcode"
 )
 
 // 中间件读体阶段的错误（先于验签发生，与签名正误无关）。
@@ -90,13 +92,14 @@ func fail(c *gin.Context, v *Verifier, err error, onFail func(c *gin.Context, er
 	// 生态标准做法经 onFail 传自定义实现。注意：不可直接复用 response.AKSKFail——
 	// 其分档匹配 ../aksk 的哨兵，与本包 Err* 互不成立（errors.Is 恒 false），
 	// 照抄会把全部失败（含读体超限的 413）落到 401 默认档；自定义 onFail 须按
-	// 本包 Err* 分档。
+	// 本包 Err* 分档。码值引本模块 errcode 常量（§3-11 码值引用纪律，2026-10-15
+	// 清欠批）——分档逻辑自持，只借用数值段定义。
 	switch {
 	case errors.Is(err, ErrBodyTooLarge):
-		c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"code": 10001, "message": "请求体过大"})
+		c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"code": errcode.ErrInvalidParams.Code, "message": "请求体过大"})
 	case errors.Is(err, ErrBodyRead):
-		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": 10001, "message": "请求体读取失败"})
+		c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"code": errcode.ErrInvalidParams.Code, "message": "请求体读取失败"})
 	default:
-		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": 10002, "message": "未授权：AK/SK 签名验证失败"})
+		c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"code": errcode.ErrUnauthorized.Code, "message": "未授权：AK/SK 签名验证失败"})
 	}
 }

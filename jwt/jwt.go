@@ -21,10 +21,10 @@ const (
 )
 
 // ErrTokenTypeMismatch 令牌类型不符（如用 RefreshToken 访问需 AccessToken 的接口）
-var ErrTokenTypeMismatch = errors.New("token type mismatch")
+var ErrTokenTypeMismatch = errors.New("jwt: token type mismatch")
 
 // ErrTokenExpired 令牌已过期（供上层映射业务码，与「token 失效」区分）
-var ErrTokenExpired = errors.New("token expired")
+var ErrTokenExpired = errors.New("jwt: token expired")
 
 // AccessClaims accessToken 的 payload
 type AccessClaims struct {

@@ -10,6 +10,8 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/tracerbiubiubiu/zhuzhao-utils/errcode"
 )
 
 // DefaultMaxBodyBytes 服务端验签中间件的默认请求体上限。
@@ -113,12 +115,14 @@ func fail(c *gin.Context, v *Verifier, err error, onFail func(c *gin.Context, er
 	// message 按失败原因区分，便于服务端日志/客户端排障一眼定位；
 	// detail 保留底层错误的完整上下文（含 AK、Ts 等现场信息）——零依赖默认形态，
 	// 生态标准做法传 response.AKSKFail()（统一信封，无 detail 字段）。
-	status, code, msg := http.StatusUnauthorized, 10002, "未授权：缺少签名头"
+	// 码值引本模块 errcode 常量（§3-11 码值引用纪律，2026-10-15 清欠批）——分档
+	// 逻辑自持（本包哨兵），只借用数值段定义。
+	status, code, msg := http.StatusUnauthorized, errcode.ErrUnauthorized.Code, "未授权：缺少签名头"
 	switch {
 	case errors.Is(err, ErrBodyTooLarge):
-		status, code, msg = http.StatusRequestEntityTooLarge, 10001, "请求体过大"
+		status, code, msg = http.StatusRequestEntityTooLarge, errcode.ErrInvalidParams.Code, "请求体过大"
 	case errors.Is(err, ErrBodyRead):
-		status, code, msg = http.StatusBadRequest, 10001, "请求体读取失败"
+		status, code, msg = http.StatusBadRequest, errcode.ErrInvalidParams.Code, "请求体读取失败"
 	case errors.Is(err, ErrBadHeader):
 		msg = "未授权：签名头格式错误"
 	case errors.Is(err, ErrUnknownCredential):

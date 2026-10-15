@@ -137,3 +137,15 @@ func TestRefreshTokenLegacyFormatPweZero(t *testing.T) {
 		t.Fatalf("pwe = %d, want 0（旧格式平滑兼容）", claims.Pwe)
 	}
 }
+
+// AT 过期与 RT 同口径包装为本包哨兵（2026-10-15 清欠批 BK-25 补用例——
+// 原仅 RT 侧有钉，AT 路径裸奔）。负 AccessTTL 签发即过期。
+func TestParseAccessToken_ExpiredWrapsSentinel(t *testing.T) {
+	m := NewManager(Config{Secret: "unit-test-secret-0123456789abcdef", AccessTTL: -time.Minute})
+	at, _, err := m.GenerateAccessToken(42, "alice", false)
+	require.NoError(t, err)
+
+	_, err = m.ParseAccessToken(at)
+	require.Error(t, err)
+	assert.True(t, errors.Is(err, ErrTokenExpired), "expired AT must wrap ErrTokenExpired, got %v", err)
+}

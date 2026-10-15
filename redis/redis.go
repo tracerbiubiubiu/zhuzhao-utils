@@ -80,7 +80,7 @@ func New(cfg Config) (*redis.Client, func(), error) {
 
 	if err := client.Ping(ctx).Err(); err != nil {
 		client.Close()
-		return nil, nil, fmt.Errorf("failed to connect to redis: %w", err)
+		return nil, nil, fmt.Errorf("redis: failed to connect: %w", err)
 	}
 
 	cleanup := func() {
