@@ -81,8 +81,14 @@ CI（GitHub Actions）：push(main / tag `v*`) + PR → vet + gofmt + test -race
 | v0.3.0 | `RefreshClaims.Pwe`（密码纪元防令牌存活越权） |
 | v0.2.0 | `aksk` 包：服务间 AK/SK HMAC 签名/验签（Sign/Verifier/GinMiddleware/Transport） |
 
+## aksk 密钥模型（设计注记）
+
+> **`aksk` 密钥模型**：按调用方发 SK（zhuzhao / taskrunner / activelist 各一把，env 注入各自容器）；被调方持有预期调用方的 SK 小密钥环验签（**SK 条目不得为空——空条目视同未知凭据，验签恒拒 fail-closed**）。内部静态密钥、无管理面；**外部 M2M** AK/SK（DB 存储/哈希/签发吊销管理面）仍 🚦 随外部调用方出现，届时算法层直接复用本包（zhuzhao phase3/09 分层注记）。
+
+## 提交规范
+
+遵 zhuzhao `docs/standards.md` §12-9（全生态公约）：`type(scope): ` 中文主题行 **≤50 字** + 评审三节正文（为什么改 / 改动摘要 / 验证证据）；本仓机械门禁（commit-lint / .githooks / make hooks）随兄弟仓对齐批落地（2026-11-02 四仓审计登记）。
+
 ## License
 
 MIT
-
-> **`aksk` 密钥模型**：按调用方发 SK（zhuzhao / taskrunner / activelist 各一把，env 注入各自容器）；被调方持有预期调用方的 SK 小密钥环验签（**SK 条目不得为空——空条目视同未知凭据，验签恒拒 fail-closed**）。内部静态密钥、无管理面；**外部 M2M** AK/SK（DB 存储/哈希/签发吊销管理面）仍 🚦 随外部调用方出现，届时算法层直接复用本包（zhuzhao phase3/09 分层注记）。
