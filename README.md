@@ -74,7 +74,7 @@ CI（GitHub Actions）：push(main / tag `v*`) + PR → vet + gofmt + test -race
 
 | 版本 | 增量 |
 |---|---|
-| v0.4.3（待发） | `aksk/gin.go`·`aksk/compat/gin.go` 默认响应码值改引 `errcode` 常量（wire 形态零变化）；**哨兵/构造错误消息补包名前缀（jwt/redis/postgres/jsonutil——⚠ 消费方可感变更**：按消息文本做的日志解析或断言需同步，`errors.Is` 判定不受影响）；crypto/errcode/logger 三包补测 + jwt AT 过期哨兵用例；README 依赖边界声明修正。驱动=2026-10-15 清欠批（zhuzhao review/11 §8 BK-25） |
+| v0.4.3（待发） | `jwt.AccessClaims.Pwe` + `GenerateAccessTokenWithEpoch`（B02-F01 候选；旧签发入口保持纪元 0）；`aksk/gin.go`·`aksk/compat/gin.go` 默认响应码值改引 `errcode` 常量（wire 形态零变化）；**哨兵/构造错误消息补包名前缀（jwt/redis/postgres/jsonutil——⚠ 消费方可感变更**：按消息文本做的日志解析或断言需同步，`errors.Is` 判定不受影响）；crypto/errcode/logger 三包补测 + jwt AT 过期哨兵用例；README 依赖边界声明修正。驱动=2026-10-15 清欠批（zhuzhao review/11 §8 BK-25） |
 | v0.4.2 | `aksk/compat` 包：存量框架 `x-auth-*` 协议兼容层（签名/验签/中间件 + 出站自动签名 `Transport`，独立重实现；挂载待目标服务）；`jsonutil.Int64Slice` 补 `MarshalJSON`（发送侧 ID 数组一律字符串，配 nil→`[]` 数组恒不 null）；jwt `ParseRefreshToken` 过期错误包装 `ErrTokenExpired` 哨兵（errors.Is 可判）；postgres 移除 `MaxIdleConns` 口径误映射 |
 | v0.4.1 | 归因键常量 `ContextKeyCaller/ContextKeyOperator` + AKSKFail 文案修正（头字段名 Signature=） |
 | v0.4.0 | 验签统一批：`Verifier.Logger` 验签失败日志、`GinMiddleware` 归因键收编（caller/operator 写入 gin context）、`response.AKSKFail()` 标准 onFail |
@@ -84,6 +84,13 @@ CI（GitHub Actions）：push(main / tag `v*`) + PR → vet + gofmt + test -race
 ## aksk 密钥模型（设计注记）
 
 > **`aksk` 密钥模型**：按调用方发 SK（zhuzhao / taskrunner / activelist 各一把，env 注入各自容器）；被调方持有预期调用方的 SK 小密钥环验签（**SK 条目不得为空——空条目视同未知凭据，验签恒拒 fail-closed**）。内部静态密钥、无管理面；**外部 M2M** AK/SK（DB 存储/哈希/签发吊销管理面）仍 🚦 随外部调用方出现，届时算法层直接复用本包（zhuzhao phase3/09 分层注记）。
+
+## AT 密码纪元接入（修复候选）
+
+审计修复候选（`ECO-20261104-B02-F01`，未发布）：`jwt.AccessClaims.Pwe` 与
+`Manager.GenerateAccessTokenWithEpoch` 为 AT 增加签发纪元；旧签发入口保留纪元 0。
+纪元存储、递增及请求时比对属于消费方职责，本包仅签发/解析。
+消费方必须升级到包含该 API 的正式版本；本地工作区联调不能替代版本 pin 验证。
 
 ## 提交规范
 

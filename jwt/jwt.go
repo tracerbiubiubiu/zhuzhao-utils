@@ -32,6 +32,7 @@ type AccessClaims struct {
 	Username           string `json:"username"`
 	JTI                string `json:"jti"`
 	MustChangePassword bool   `json:"mcp,omitempty"` // 首次登录改密标记
+	Pwe                int64  `json:"pwe,omitempty"` // 签发时的密码纪元；调用方比对当前纪元以撤销旧 AT
 	TokenType          string `json:"typ"`           // 必须为 TokenTypeAccess
 	jwt.RegisteredClaims
 }
@@ -64,6 +65,15 @@ func NewManager(cfg Config) *Manager {
 
 // GenerateAccessToken 签发 accessToken
 func (m *Manager) GenerateAccessToken(userID int64, username string, mustChangePassword bool) (string, string, error) {
+	return m.GenerateAccessTokenWithEpoch(userID, username, mustChangePassword, 0)
+}
+
+// GenerateAccessTokenWithEpoch 签发绑定密码纪元的 AT。旧入口保留纪元 0，
+// 是否仍有效由消费方与权威纪元比对决定；本包不访问会话存储。
+func (m *Manager) GenerateAccessTokenWithEpoch(userID int64, username string, mustChangePassword bool, pwe int64) (string, string, error) {
+	if pwe < 0 {
+		return "", "", errors.New("jwt: password epoch must be nonnegative")
+	}
 	now := time.Now()
 	jti := generateJTI()
 	claims := AccessClaims{
@@ -71,6 +81,7 @@ func (m *Manager) GenerateAccessToken(userID int64, username string, mustChangeP
 		Username:           username,
 		JTI:                jti,
 		MustChangePassword: mustChangePassword,
+		Pwe:                pwe,
 		TokenType:          TokenTypeAccess,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(now.Add(m.accessTTL)),
