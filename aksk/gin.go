@@ -119,6 +119,8 @@ func fail(c *gin.Context, v *Verifier, err error, onFail func(c *gin.Context, er
 	// 逻辑自持（本包哨兵），只借用数值段定义。
 	status, code, msg := http.StatusUnauthorized, errcode.ErrUnauthorized.Code, "未授权：缺少签名头"
 	switch {
+	case errors.Is(err, ErrBodyStore):
+		status, code, msg = http.StatusServiceUnavailable, errcode.ErrInternal.Code, "请求体暂存失败"
 	case errors.Is(err, ErrBodyTooLarge):
 		status, code, msg = http.StatusRequestEntityTooLarge, errcode.ErrInvalidParams.Code, "请求体过大"
 	case errors.Is(err, ErrBodyRead):

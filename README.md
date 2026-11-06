@@ -56,6 +56,10 @@ r.Use(aksk.GinMiddleware(v, response.AKSKFail()))
 
 要点：canonical 覆盖 METHOD/PATH（空路径归一化 `/`）/body 哈希/TS/`X-Request-ID`/`X-Operator`；URL query 不入签（安全参数放 body）；TS ±5min 防重放；读体上限默认 8MiB（`Verifier.MaxBodyBytes` 可调）。
 
+大文件入口可单独使用 `aksk.GinStreamingMiddleware(verifier, tempDir, response.AKSKFail())`：按 `MaxBodyBytes` 有界流式验签，同时暂存私有 0600 文件；认证成功后 rewind 才进入 handler，归因与普通中间件一致。普通 CRUD 继续使用原内存中间件。`tempDir=""` 使用系统临时目录，部署须准备与请求并发/大小匹配的磁盘容量和读取超时；正常返回、业务失败、panic 展开均清理，SIGKILL/进程崩溃残留由系统临时目录清理策略承接。请求读失败400、超限413、鉴权401、服务器暂存故障503，不回显内部路径。
+
+非 Gin 调用方可用 `Verifier.VerifyReader(request, reader)` 流式校验；它不还原或关闭 reader，不保存 body，最多探读上限外一字节，先校验头再读体、读后重验时间窗。业务写必须在验签成功后执行。取消会在每次 Read 前后检查 context，底层阻塞 reader 的打断/关闭仍由调用方负责。新接口目前位于独立开发分支，消费者以包含它的不可变版本 pin，不代表已发布新 tag。
+
 > 版本注记：`Verifier.Logger` 与 `response.AKSKFail()` 自 **v0.4.0** 起；归因键常量 `aksk.ContextKeyCaller`/`aksk.ContextKeyOperator`（消费方取 gin context 归因时引用，禁裸字符串）及 AKSKFail 格式提示修正自 **v0.4.1** 起，**以发布 tag 为准 pin**。
 
 各基建包（`logger` / `postgres` / `redis` / `jwt`）自带 `Config` 结构体，零值字段取安全默认值，不绑定任何配置框架；由调用方把自己（viper / yaml / env）的配置映射进来。
