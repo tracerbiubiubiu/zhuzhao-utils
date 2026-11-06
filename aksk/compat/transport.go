@@ -29,10 +29,11 @@ func (t *Transport) RoundTrip(req *http.Request) (*http.Response, error) {
 	var body []byte
 	if req.Body != nil {
 		var err error
-		if body, err = io.ReadAll(req.Body); err != nil {
+		body, err = io.ReadAll(req.Body)
+		_ = req.Body.Close() // RoundTripper owns the body even when ReadAll fails.
+		if err != nil {
 			return nil, err
 		}
-		_ = req.Body.Close()
 	}
 	signed := req.Clone(req.Context())
 	signed.Body = io.NopCloser(bytes.NewReader(body))
