@@ -1,6 +1,8 @@
 # AK/SK协议与生命周期
 
-准确入口为 `aksk/aksk.go` 的 `Sign`、`aksk/aksk.go` 的 `Verifier`、`aksk/gin.go` 的 `GinMiddleware` 和 `aksk/transport.go` 的 `Transport`；存量协议在独立 `aksk/compat` 包。最小接线见 [接入指南](../guides/usage.md)。
+AK是调用方标识，SK是双方持有的共享密钥；HMAC签名让被调方检查请求是否由持有该密钥的一方发出，以及签名覆盖的内容是否被改动。它不替代业务授权或幂等处理。
+
+准确入口为 `aksk/aksk.go` 的 `Sign`、`aksk/aksk.go` 的 `Verifier`、`aksk/gin.go` 的 `GinMiddleware` 和 `Transport`；存量协议在独立 `aksk/compat` 包。最小接线见 [接入指南](../guides/usage.md)。
 
 ## 内部协议
 
@@ -18,7 +20,9 @@ Verifier.VerifyReader(request,reader)不还原、不关闭reader，也不保存b
 
 ## 存量compat协议
 
-compat是独立重实现，不依赖原库，与内部aksk零耦合，测试冻结向量为线协议依据。提供Sign/Verifier/GinMiddleware/Transport；我方补时间窗、恒时比较、读体上限、空SK拒绝。存量无operator头，归因只有caller=AK。
+compat是独立重实现，不依赖原库，与内部aksk零耦合，测试冻结向量为线协议依据。既有兼容验证包含存量实现生成向量、服务端校验器反向验证及双向交叉验证；出处见主仓[存量迁移追记](https://github.com/tracerbiubiubiu/zhuzhao/blob/phase5/docs/phase1/02-auth.md)。提供Sign/Verifier/GinMiddleware/Transport；我方补时间窗、恒时比较、默认8MiB读体上限、空SK拒绝。存量无operator头，归因只有caller=AK。
+
+默认失败响应的读体码为10001、鉴权码为10002；超限413、读取失败400、鉴权失败401。自定义文案通过`onFail`接入，并按`aksk/compat/gin.go`的本包`Err*`分档；不可直接复用内部协议的`response.AKSKFail()`，因为两包哨兵不同，会丢失compat读体错误的正确分档。
 
 compat签名**不覆盖method/path**，只挂专用路由组仍防不了组内跨端点重放：组内应实质单端点或端点幂等/无副作用。无nonce的窗口内重放由业务幂等承接。Verifier.SkipBody默认false；只有抓包确认存量skipBody形态后才显式开启，默认仅真空体接受空签名。该兼容层不是新服务的默认协议，存量迁移结束后按既有决定退役。
 

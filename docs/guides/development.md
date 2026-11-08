@@ -14,8 +14,7 @@ CI（`.github/workflows/ci.yml`）对所有分支push、v* tag push与PR触发�
 ## 提交规范
 
 
-遵 zhuzhao `docs/standards.md` §12-9 / §12-10；关联主仓复核报告
-`deliverables/software-company/zhuzhao-report-followup-2026-11-08.md` 的 **RR-GIT-01**（2026-11-08）。
+遵 zhuzhao `docs/standards.md` §12-9 / §12-10；关联主仓[2026-11-08复核报告](https://github.com/tracerbiubiubiu/zhuzhao/blob/phase5/docs/review/reports/zhuzhao-report-followup-2026-11-08.md)的 **RR-GIT-01**。链接指向当前维护分支，报告中的固定提交与验证范围仍按原时点解读。
 本仓脚本与主仓同源、自包含，仅依赖 Git + Python 3 标准库，不依赖主仓目录或新增 Go/npm 包。
 主题为 `type(scope): 摘要`（scope 可省略），摘要去前缀后最多 50 个 Unicode 字符、不得以句号结尾；
 主题与正文间须空行，正文不得为空或只有空白。所有新 merge 提交也须显式提供规范主题与正文。
