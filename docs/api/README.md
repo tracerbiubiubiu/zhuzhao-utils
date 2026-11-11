@@ -22,6 +22,6 @@
 
 ## 接入与版本
 
-使用步骤见[接入指南](../guides/usage.md)，签名、失败响应及重放边界集中维护在[AK/SK契约](aksk.md)。内部协议的设计出处是主仓[服务集成设计§9](https://github.com/tracerbiubiubiu/zhuzhao/blob/phase5/docs/phase3/16-external-integration.md)，compat的来源与退役决定见主仓[致谢](https://github.com/tracerbiubiubiu/zhuzhao/blob/phase5/docs/acknowledgments.md)及[认证设计的存量迁移追记](https://github.com/tracerbiubiubiu/zhuzhao/blob/phase5/docs/phase1/02-auth.md)。
+使用步骤见[接入指南](../guides/usage.md)，签名、失败响应及重放边界集中维护在[AK/SK契约](aksk.md)。后续 R07/P7 的调用/身份、纯机制边界与版本兼容见[平台公共机制合同](platform-contracts.md)。内部协议的设计出处是主仓[服务集成设计§9](../../../zhuzhao/docs/phase3/16-external-integration.md)，compat的来源与退役决定见主仓[致谢](../../../zhuzhao/docs/acknowledgments.md)及[认证设计的存量迁移追记](../../../zhuzhao/docs/phase1/02-auth.md)。
 
 包存在不代表所有发布tag都包含它；版本/tag与Reader/Streaming等未发布候选见[发布记录](../ops/releases.md)。
