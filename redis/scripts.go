@@ -3,6 +3,7 @@ package redis
 import (
 	"context"
 	_ "embed"
+	"errors"
 	"fmt"
 	"time"
 
@@ -68,7 +69,7 @@ func (s *Scripts) loginLockKey(subject string) string {
 // LoginLockIsBlocked 校验密码前检查是否已锁定（count > max_fails）
 func (s *Scripts) LoginLockIsBlocked(ctx context.Context, subject string) (bool, error) {
 	n, err := s.client.Get(ctx, s.loginLockKey(subject)).Int()
-	if err == goredis.Nil {
+	if errors.Is(err, goredis.Nil) {
 		return false, nil
 	}
 	if err != nil {

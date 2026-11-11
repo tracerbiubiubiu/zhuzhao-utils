@@ -24,6 +24,7 @@ func TestAKSKFail(t *testing.T) {
 		wantCode    int
 		wantMsgPart string
 	}{
+		{"body store", fmt.Errorf("%w: %w", aksk.ErrBodyRead, aksk.ErrBodyStore), http.StatusServiceUnavailable, 10000, "暂存失败"},
 		{"body too large", aksk.ErrBodyTooLarge, http.StatusRequestEntityTooLarge, 10001, "读体上限"},
 		{"body read", aksk.ErrBodyRead, http.StatusBadRequest, 10001, "读取失败"},
 		{"missing header", aksk.ErrMissingHeader, http.StatusUnauthorized, 10002, "缺少 Authorization"},

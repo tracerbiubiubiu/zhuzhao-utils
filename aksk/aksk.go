@@ -95,7 +95,8 @@ func Sign(req *http.Request, body []byte, opt SignOptions) {
 
 // Verifier 服务端验签器。Keys 为预期调用方的 AK → SK 映射（小密钥环）。
 // MaxSkew 零值取 DefaultMaxSkew；Now 可注入时钟（测试用）。
-// MaxBodyBytes 为 GinMiddleware 读体上限：零值取 DefaultMaxBodyBytes，负值不限制（不建议）。
+// MaxBodyBytes 为 GinMiddleware/GinStreamingMiddleware/VerifyReader 读体上限：
+// 零值取 DefaultMaxBodyBytes，负值不限制（不建议）。
 // Logger 为验签失败的排障日志出口（2026-09-16 统一批：失败现场落服务端日志，
 // 响应端不再回显 detail）；零值走 slog 默认（stderr），生产装配传入服务自身
 // slog 以并入统一日志文件。
@@ -116,22 +117,31 @@ func (v *Verifier) maxBody() int64 {
 
 // Verify 校验请求签名。body 为请求体字节（中间件已读取还原，调用方再次绑定不受影响）。
 func (v *Verifier) Verify(r *http.Request, body []byte) error {
+	return v.verifyDigest(r, sha256.Sum256(body))
+}
+
+// verificationHeader 只校验签名头/密钥/时间窗，不消费请求体。
+type verificationHeader struct {
+	ak, ts  string
+	sk, sig []byte
+}
+
+func (v *Verifier) verificationHeader(r *http.Request) (verificationHeader, error) {
 	h := r.Header.Get(HeaderAuthorization)
 	if h == "" {
-		return ErrMissingHeader
+		return verificationHeader{}, ErrMissingHeader
 	}
 	ak, ts, sig, err := parseAuth(h)
 	if err != nil {
-		return err
+		return verificationHeader{}, err
 	}
 	sk, ok := v.Keys[ak]
-	// 纵深防御：空 SK 条目 = HMAC 空密钥可伪造——视同未知凭据（配置层也应 fail-closed 拒启）
 	if !ok || len(sk) == 0 {
-		return fmt.Errorf("%w: %s", ErrUnknownCredential, ak)
+		return verificationHeader{}, fmt.Errorf("%w: %s", ErrUnknownCredential, ak)
 	}
 	stamp, err := time.Parse(time.RFC3339, ts)
 	if err != nil {
-		return fmt.Errorf("%w: ts %q is not RFC3339", ErrBadHeader, ts)
+		return verificationHeader{}, fmt.Errorf("%w: ts %q is not RFC3339", ErrBadHeader, ts)
 	}
 	now := time.Now
 	if v.Now != nil {
@@ -142,19 +152,27 @@ func (v *Verifier) Verify(r *http.Request, body []byte) error {
 		skew = DefaultMaxSkew
 	}
 	if d := now().Sub(stamp); d > skew || d < -skew {
-		return fmt.Errorf("%w: %s", ErrExpired, ts)
+		return verificationHeader{}, fmt.Errorf("%w: %s", ErrExpired, ts)
 	}
-	want := signature(sk, canonical(
-		r.Method, r.URL.Path, body, ts,
-		r.Header.Get(HeaderXRequestID), r.Header.Get(HeaderXOperator),
-	))
 	got, err := hex.DecodeString(sig)
 	if err != nil {
-		// 非 hex 的 Signature 是头格式问题，与「密钥对不上」区分开
-		return fmt.Errorf("%w: signature %q is not hex", ErrBadHeader, sig)
+		return verificationHeader{}, fmt.Errorf("%w: signature %q is not hex", ErrBadHeader, sig)
 	}
-	if subtle.ConstantTimeCompare(got, want) != 1 {
-		return fmt.Errorf("%w (ak=%s)", ErrBadSignature, ak)
+	if len(got) != sha256.Size {
+		return verificationHeader{}, ErrBadSignature
+	}
+	return verificationHeader{ak: ak, ts: ts, sk: sk, sig: got}, nil
+}
+
+func (v *Verifier) verifyDigest(r *http.Request, digest [sha256.Size]byte) error {
+	h, err := v.verificationHeader(r)
+	if err != nil {
+		return err
+	}
+	want := signature(h.sk, canonicalDigest(r.Method, r.URL.Path, digest, h.ts,
+		r.Header.Get(HeaderXRequestID), r.Header.Get(HeaderXOperator)))
+	if subtle.ConstantTimeCompare(h.sig, want) != 1 {
+		return fmt.Errorf("%w (ak=%s)", ErrBadSignature, h.ak)
 	}
 	return nil
 }
@@ -174,10 +192,13 @@ func CredentialOf(r *http.Request) string {
 // path 归一化：根路径请求签名侧 http.Request.URL.Path 为 ""、服务侧为 "/"——
 // 统一按 "/" 处理，否则根 URL 回调验签必失配。
 func canonical(method, path string, body []byte, ts, requestID, operator string) []byte {
+	return canonicalDigest(method, path, sha256.Sum256(body), ts, requestID, operator)
+}
+
+func canonicalDigest(method, path string, sum [sha256.Size]byte, ts, requestID, operator string) []byte {
 	if path == "" {
 		path = "/"
 	}
-	sum := sha256.Sum256(body)
 	return []byte(strings.Join([]string{
 		method, path, hex.EncodeToString(sum[:]), ts, requestID, operator,
 	}, "\n"))

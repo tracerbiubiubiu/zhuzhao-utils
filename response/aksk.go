@@ -19,6 +19,8 @@ import (
 func AKSKFail() func(c *gin.Context, err error) {
 	return func(c *gin.Context, err error) {
 		switch {
+		case errors.Is(err, aksk.ErrBodyStore):
+			Fail(c, http.StatusServiceUnavailable, errcode.ErrInternal.Code, "请求体暂存失败，请稍后重试")
 		case errors.Is(err, aksk.ErrBodyTooLarge):
 			Fail(c, http.StatusRequestEntityTooLarge, errcode.ErrInvalidParams.Code, "请求体超过验签读体上限，请缩小后重试")
 		case errors.Is(err, aksk.ErrBodyRead):

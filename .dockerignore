@@ -1,0 +1,10 @@
+
+
+# Local audit workspace
+.codex/
+
+# Local reference and execution artifacts; tracked documentation lives in docs/
+doc/
+deliverables/
+outputs/
+audit-reports/

@@ -2,6 +2,7 @@ package redis
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 
@@ -135,5 +136,34 @@ func TestLoginLock_CustomOptions(t *testing.T) {
 	}
 	if _, err := client.Get(ctx, "guard:u-1").Result(); err != nil {
 		t.Fatalf("自定义前缀未生效: %v", err)
+	}
+}
+
+// wrapNilHook 模拟埋点/追踪类 hook 对命令错误做 %w 包装（go-redis 的 hook 机制允许）。
+type wrapNilHook struct{}
+
+func (wrapNilHook) DialHook(next goredis.DialHook) goredis.DialHook { return next }
+func (wrapNilHook) ProcessHook(next goredis.ProcessHook) goredis.ProcessHook {
+	return func(ctx context.Context, cmd goredis.Cmder) error {
+		if err := next(ctx, cmd); err != nil {
+			wrapped := fmt.Errorf("traced: %w", err)
+			cmd.SetErr(wrapped)
+			return wrapped
+		}
+		return nil
+	}
+}
+func (wrapNilHook) ProcessPipelineHook(next goredis.ProcessPipelineHook) goredis.ProcessPipelineHook {
+	return next
+}
+
+// 2026-11-09：缺键须按 errors.Is 判定——接入包装错误的 hook 后，== goredis.Nil 会把
+// 「从未失败过的账号」误报为 Redis 故障（登录链路直接 500/503）。
+func TestLoginLockIsBlocked_WrappedNil(t *testing.T) {
+	s, _ := newTestScripts(t)
+	s.client.AddHook(wrapNilHook{})
+	is, err := s.LoginLockIsBlocked(context.Background(), "u-900099")
+	if err != nil || is {
+		t.Fatalf("缺键（包装后的 redis.Nil）应视为未锁定：got %v, %v；want false, nil", is, err)
 	}
 }
