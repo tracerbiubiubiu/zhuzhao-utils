@@ -1,6 +1,6 @@
 # 开发与提交
 
-在仓库根目录使用go.mod指定的Go版本。
+本库最低支持 Go 1.26.11，推荐开发工具链 Go 1.27.4（`go.mod` 的 `toolchain`）；消费方不因工具链推荐被要求采用 1.27 语言特性。Go 1.26 已装环境可用 `GOTOOLCHAIN=local` 验证最低线，CI分别使用1.26.11/1.27.4运行vet、格式与race。依赖与消费者基线见 [版本升级记录](../ops/version-upgrade.md)。
 
 ```sh
 make hooks
