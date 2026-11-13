@@ -4,7 +4,7 @@
 
 > 2026-11-11 重规划。本页维护公共库边界与后续接入约束；不新增包/API、协议版本或发布 tag。排期、工作量与关闭证据唯一登记在主仓[规划总账](../../../zhuzhao/docs/review/planning-backlog.md)的 **R07 / P7**，相关调用/身份合同分别见 I01/I02。当前函数与线协议以[公共包](README.md)、[AK/SK](aksk.md)和[发布记录](../ops/releases.md)为准。
 
-> **2026-11-13设计增量**：所有核心/可插拔业务能力的对外API与内部统一逻辑调用，语义权威为主仓[统一能力调用合同](../../../zhuzhao/docs/design/capability-invocation-contract.md)。共同词典可提前冻结，不表示已新增公共包或签名协议；新覆盖范围尚未复估，旧R07/I01等预算不自动扩展。当前只提交设计阶段快照，T0未启动。
+> **2026-11-13设计增量**：所有核心/可插拔业务能力的对外API与内部统一逻辑调用，语义权威为主仓[统一能力调用合同](../../../zhuzhao/docs/design/capability-invocation-contract.md)。共同词典可提前冻结，不表示已新增公共包或签名协议；CE与旧子范围已按主仓净增册扣重复估，旧R07/I01等预算不自动扩展。当前只提交设计阶段快照，T0未启动。
 
 ## 1. 公共库只持有机制
 
@@ -78,3 +78,10 @@ R07 核对稳定 tag、不可变 pseudo-version、源码提交、module sum 与�
 contract 验证新旧版本、服务端/客户端双向向量和实际消费者组合；从空 module cache 验证精确版本可下载，禁止用本机 replace/GOWORK 冒充真实发布。真实网络/密钥/专业服务验证由消费者单列，不在工具库测试发送真实请求或消耗模型额度。
 
 本轮仅补文档，不关闭 R07、发布版本、改依赖或执行代码门禁。后续实现同步本页、[AK/SK 契约](aksk.md)、[发布记录](../ops/releases.md)、受影响消费者和主总账；发布、部署状态与测试通过分别留证。
+
+
+## 2026-11-13逐操作库存与精确合同后继
+
+当前公开函数、消费者、产品入口及内部机制例外已在主仓[逐操作库存](../../../zhuzhao/docs/design/capability-operation-catalog.md)清点；[三链精确合同](../../../zhuzhao/docs/design/capability-interconnect-detail.md)与[Schema](../../../zhuzhao/docs/design/capability-interconnect-detail.schema.json)给出目标调用/receipt/源事实/准入语义。公共库只抽稳定签名、错误、Schema与协议等机制，领域授权、状态、写主和provider SDK归对应属主。不能为统一自建万能invoke、全局业务Policy/幂等库或共享运行数据层。
+
+能力ID/合同版本、operation/invocation、attempt/fence分别承载静态/动态身份；未知版本拒绝，旧wire经版本化adapter接入。MCP与skill研究样例使用独立module，未改本库产品依赖；固定SDK及传递依赖的许可/漏洞核验仍按实际制品走G05/R07，不把样例许可摘要当全产品清单。两个实际消费者证明共性后再抽机制，净估与窗口只回填主仓总账。
