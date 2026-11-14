@@ -1,5 +1,7 @@
 # 公共包与契约
 
+> **用途**：查找现有包与接口权威。**设计状态**：本页索引当前源码及协议，R07目标另列。**实施状态**：函数存在不表示所有tag均已发布或消费者已升级，实际可用性核精确pin。
+
 本库只收无业务数据依赖的通用工具，不收资源库表、权限策略事实或业务handler。包源码及Go doc仍在各包目录，module path不变；本页为索引，不代替具体函数签名。
 
 ## 按用途找包
@@ -22,6 +24,8 @@
 
 ## 接入与版本
 
-使用步骤见[接入指南](../guides/usage.md)，签名、失败响应及重放边界集中维护在[AK/SK契约](aksk.md)。内部协议的设计出处是主仓[服务集成设计§9](https://github.com/tracerbiubiubiu/zhuzhao/blob/phase5/docs/phase3/16-external-integration.md)，compat的来源与退役决定见主仓[致谢](https://github.com/tracerbiubiubiu/zhuzhao/blob/phase5/docs/acknowledgments.md)及[认证设计的存量迁移追记](https://github.com/tracerbiubiubiu/zhuzhao/blob/phase5/docs/phase1/02-auth.md)。
+使用步骤见[接入指南](../guides/usage.md)，签名、失败响应及重放边界集中维护在[AK/SK契约](aksk.md)。后续 R07/P7 的调用/身份、纯机制边界与版本兼容见[平台公共机制合同](platform-contracts.md)。内部协议的设计出处是主仓[服务集成设计§9](../../../zhuzhao/docs/phase3/16-external-integration.md)，compat的来源与退役决定见主仓[致谢](../../../zhuzhao/docs/acknowledgments.md)及[认证设计的存量迁移追记](../../../zhuzhao/docs/phase1/02-auth.md)。
 
 包存在不代表所有发布tag都包含它；版本/tag与Reader/Streaming等未发布候选见[发布记录](../ops/releases.md)。
+
+2026-11-13统一能力调用的[目标词典与公共信封边界](platform-contracts.md#统一id词典静态能力与动态操作分开)仅是设计承接：utils保留纯机制，领域能力/权限/运行事实仍归核心或扩展；不因新愿景预建shared-core或改现有wire字段。

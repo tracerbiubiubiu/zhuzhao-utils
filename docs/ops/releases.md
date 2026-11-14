@@ -1,6 +1,6 @@
 # 版本、发布与消费者pin
 
-本页只记录版本边界，不执行发tag或push。v0.4.3已正式发布，不能再称B02-F01未发布候选；其AT epoch API仍需消费方自行存储/比对。Reader/Streaming以及Transport读失败关闭Body修复位于审计分支候选，未因此发布v0.4.4正式tag；以包含相应实现的不可变pseudo-version和go.sum校验接入，不用main/本机HEAD替代tag对应源码。消费者是否已承接或部署由各仓收据决定。
+本页只记录版本边界，不执行发tag或push。v0.4.3已正式发布，不能再称B02-F01未发布候选；其AT epoch API仍需消费方自行存储/比对。截至2026-11-11重规划基线，Reader/Streaming以及Transport读失败关闭Body修复已承接至main，未因此发布v0.4.4正式tag；以包含相应实现的不可变pseudo-version和go.sum校验接入，不用main/本机HEAD替代tag对应源码。消费者是否已承接或部署由各仓收据决定，后续版本/协议窗口见[R07平台公共机制合同](../api/platform-contracts.md)。
 
 ## 已发布增量
 
