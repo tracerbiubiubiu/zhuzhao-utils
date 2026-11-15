@@ -1,4 +1,4 @@
-.PHONY: hooks commit-lint test-commit-lint test vet build lint tidy fmt
+.PHONY: quality-plan quality-check hooks commit-lint test-commit-lint test vet build lint tidy fmt
 
 test:
 	go test ./...
@@ -29,3 +29,12 @@ commit-lint:
 
 test-commit-lint:
 	python3 scripts/test-commit-policy.py
+
+# Local and CI classify the same base..HEAD window; include staged/unstaged/untracked work.
+BASE ?= origin/main
+
+quality-plan:
+	python3 scripts/quality-gate.py local --kind utils --base "$(BASE)" --plan-only
+
+quality-check:
+	python3 scripts/quality-gate.py local --kind utils --base "$(BASE)"
