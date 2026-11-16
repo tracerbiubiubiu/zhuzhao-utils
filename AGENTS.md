@@ -2,11 +2,18 @@
 
 适用于本仓全部文件和每次AI/人工协作。长规则只维护权威来源，本页不另立一套公约。
 
+## 文档与工作资料归属
+
+- 新增或移动文档前，先按[文档维护约定](../zhuzhao/docs/documentation.md)确定唯一归属、Git保留范围及入口；详细规则只维护该页。
+- 可复用方法、空白模板和开发提示词从[工作资料库](../zhuzhao/docs/toolkit/README.md)查找并复用；填写后的执行实例按正式结论或本地过程材料归档，不能回填到模板原件。
+- 当前计划归主仓planning，合同/指南归实现仓docs，正式结论归review/reports；原始调研、日志、截图、备份和操作收据按[材料目录](../zhuzhao/docs/materials.md)留仓库外档案。ignored `.codex/`仅作执行工作区，收尾提炼结论并登记材料ID。
+- 不在src下新建散落报告目录或第二套长期知识库；模板/提示词不扩大操作授权，也不改变本仓门禁。迁移须检查链接、脚本和真实消费者，收尾核Git状态及材料去向。
+
 ## 职责与权威
 
 - 本仓只提供签名、令牌、错误/响应、日志、连接构造和纯校验机制；不收业务表、授权策略事实、目录或运行状态机。
 - [文档导航](docs/README.md)区分现行包/API、目标合同、验证与发布历史；准确函数签名以包源码/Go doc和消费者实际pin为准。
-- 全生态工程、API、安全和测试纪律遵[主仓standards](../zhuzhao/docs/standards.md)；边界见[平台公共机制合同](docs/api/platform-contracts.md)，计划归[唯一总账](../zhuzhao/docs/review/planning-backlog.md)。
+- 全生态工程、API、安全和测试纪律遵[主仓standards](../zhuzhao/docs/standards.md)；边界见[平台公共机制合同](docs/api/platform-contracts.md)，计划归[唯一总账](../zhuzhao/docs/planning/planning-backlog.md)。
 - 目标词典/公共信封不表示新SDK、wire字段或版本已发布；候选源码、正式tag与实际消费者部署分别核验。
 
 ## 开发与验证

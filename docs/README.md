@@ -8,7 +8,7 @@
 
 ## 目标设计与计划
 
-[平台公共机制合同](api/platform-contracts.md)承接R07/P7的机制边界、调用/身份兼容和消费者版本。统一能力及词典按主仓[共同合同](../../zhuzhao/docs/design/capability-invocation-contract.md)；排期、状态和新增范围回[唯一总账](../../zhuzhao/docs/review/planning-backlog.md)，不在本仓复制预算或预建shared-core。
+[平台公共机制合同](api/platform-contracts.md)承接R07/P7的机制边界、调用/身份兼容和消费者版本。统一能力及词典按主仓[共同合同](../../zhuzhao/docs/design/capability-invocation-contract.md)；排期、状态和新增范围回[唯一总账](../../zhuzhao/docs/planning/planning-backlog.md)，不在本仓复制预算或预建shared-core。
 
 ## 开发与运行验证
 
@@ -17,3 +17,9 @@
 ## 发布与历史
 
 使用新接口前核[版本/tag与pin](ops/releases.md)，工具链候选和消费者基线看[升级记录](ops/version-upgrade.md)。已发布版本、未发布源码候选和实际运行版本不能混称；旧tag与固定报告保留其时点含义。
+
+## 统一入口与Git保留范围
+
+全项目阅读从主仓[文档总入口](../../zhuzhao/docs/README.md)开始，当前计划统一在[planning](../../zhuzhao/docs/planning/README.md)；本仓继续维护随源码版本变化的合同、指南和正式结论。原始调研、执行卡、原日志、截图、备份与纯操作收据归仓库外项目档案，短期执行产物可留ignored `.codex/`；材料ID与保留决定见[材料目录](../../zhuzhao/docs/materials.md)。机器台账、冻结来源、Schema样例和必要验证依据继续Git跟踪，不按扩展名批量忽略。
+
+复用审计方法、空白模板及开发提示词见主仓[工作资料库](../../zhuzhao/docs/toolkit/README.md)；创建和收尾按[文档维护约定](../../zhuzhao/docs/documentation.md)执行，原件与执行实例分开保存。
