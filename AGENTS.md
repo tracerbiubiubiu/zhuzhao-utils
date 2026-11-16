@@ -6,7 +6,7 @@
 
 - 本仓只提供签名、令牌、错误/响应、日志、连接构造和纯校验机制；不收业务表、授权策略事实、目录或运行状态机。
 - [文档导航](docs/README.md)区分现行包/API、目标合同、验证与发布历史；准确函数签名以包源码/Go doc和消费者实际pin为准。
-- 全生态工程、API、安全和测试纪律遵[主仓standards](../zhuzhao/docs/standards.md)；边界见[平台公共机制合同](docs/api/platform-contracts.md)，计划归[唯一总账](../zhuzhao/docs/review/planning-backlog.md)。
+- 全生态工程、API、安全和测试纪律遵[主仓standards](../zhuzhao/docs/standards.md)；边界见[平台公共机制合同](docs/api/platform-contracts.md)，计划归[唯一总账](../zhuzhao/docs/planning/planning-backlog.md)。
 - 目标词典/公共信封不表示新SDK、wire字段或版本已发布；候选源码、正式tag与实际消费者部署分别核验。
 
 ## 开发与验证
