@@ -3,6 +3,7 @@ package jwt
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -20,6 +21,9 @@ const (
 	TokenTypeRefresh = "refresh"
 )
 
+// SessionSchemaDBEpochV1 identifies tokens carrying a database session epoch.
+const SessionSchemaDBEpochV1 = "db_epoch_v1"
+
 // ErrTokenTypeMismatch 令牌类型不符（如用 RefreshToken 访问需 AccessToken 的接口）
 var ErrTokenTypeMismatch = errors.New("jwt: token type mismatch")
 
@@ -34,6 +38,8 @@ type AccessClaims struct {
 	MustChangePassword bool   `json:"mcp,omitempty"` // 首次登录改密标记
 	Pwe                int64  `json:"pwe,omitempty"` // 签发时的密码纪元；调用方比对当前纪元以撤销旧 AT
 	TokenType          string `json:"typ"`           // 必须为 TokenTypeAccess
+	SessionSchema      string `json:"session_schema,omitempty"`
+	SessionEpoch       string `json:"session_epoch,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -44,8 +50,10 @@ type RefreshClaims struct {
 	// Pwe 密码纪元（password epoch，可选）：签发时调用方注入当前纪元值；
 	// 改密/重置后调用方 INCR 纪元，Refresh 比对不一致即拒——密码重置吊销
 	// 与并发 Refresh 的 TOCTOU 防线。旧令牌无此字段解析为 0，纪元从 0 起平滑兼容。
-	Pwe       int64  `json:"pwe,omitempty"`
-	TokenType string `json:"typ"` // 必须为 TokenTypeRefresh
+	Pwe           int64  `json:"pwe,omitempty"`
+	TokenType     string `json:"typ"` // 必须为 TokenTypeRefresh
+	SessionSchema string `json:"session_schema,omitempty"`
+	SessionEpoch  string `json:"session_epoch,omitempty"`
 	jwt.RegisteredClaims
 }
 
@@ -71,6 +79,18 @@ func (m *Manager) GenerateAccessToken(userID int64, username string, mustChangeP
 // GenerateAccessTokenWithEpoch 签发绑定密码纪元的 AT。旧入口保留纪元 0，
 // 是否仍有效由消费方与权威纪元比对决定；本包不访问会话存储。
 func (m *Manager) GenerateAccessTokenWithEpoch(userID int64, username string, mustChangePassword bool, pwe int64) (string, string, error) {
+	return m.generateAccessToken(userID, username, mustChangePassword, pwe, 0)
+}
+
+// GenerateAccessTokenWithSessionEpoch issues an AT bound to a positive database epoch.
+func (m *Manager) GenerateAccessTokenWithSessionEpoch(userID int64, username string, mustChangePassword bool, pwe, sessionEpoch int64) (string, string, error) {
+	if sessionEpoch < 1 {
+		return "", "", errors.New("jwt: session epoch must be positive")
+	}
+	return m.generateAccessToken(userID, username, mustChangePassword, pwe, sessionEpoch)
+}
+
+func (m *Manager) generateAccessToken(userID int64, username string, mustChangePassword bool, pwe, sessionEpoch int64) (string, string, error) {
 	if pwe < 0 {
 		return "", "", errors.New("jwt: password epoch must be nonnegative")
 	}
@@ -90,6 +110,10 @@ func (m *Manager) GenerateAccessTokenWithEpoch(userID int64, username string, mu
 			ID:        jti,
 		},
 	}
+	if sessionEpoch > 0 {
+		claims.SessionSchema = SessionSchemaDBEpochV1
+		claims.SessionEpoch = strconv.FormatInt(sessionEpoch, 10)
+	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(m.secret)
 	return signed, jti, err
@@ -97,6 +121,18 @@ func (m *Manager) GenerateAccessTokenWithEpoch(userID int64, username string, mu
 
 // GenerateRefreshToken 签发 refreshToken
 func (m *Manager) GenerateRefreshToken(userID int64, deviceID string, ttl time.Duration, pwe int64) (string, string, error) {
+	return m.generateRefreshToken(userID, deviceID, ttl, pwe, 0)
+}
+
+// GenerateRefreshTokenWithSessionEpoch issues an RT bound to a positive database epoch.
+func (m *Manager) GenerateRefreshTokenWithSessionEpoch(userID int64, deviceID string, ttl time.Duration, pwe, sessionEpoch int64) (string, string, error) {
+	if sessionEpoch < 1 {
+		return "", "", errors.New("jwt: session epoch must be positive")
+	}
+	return m.generateRefreshToken(userID, deviceID, ttl, pwe, sessionEpoch)
+}
+
+func (m *Manager) generateRefreshToken(userID int64, deviceID string, ttl time.Duration, pwe, sessionEpoch int64) (string, string, error) {
 	now := time.Now()
 	jti := generateJTI()
 	claims := RefreshClaims{
@@ -110,6 +146,10 @@ func (m *Manager) GenerateRefreshToken(userID int64, deviceID string, ttl time.D
 			NotBefore: jwt.NewNumericDate(now),
 			ID:        jti,
 		},
+	}
+	if sessionEpoch > 0 {
+		claims.SessionSchema = SessionSchemaDBEpochV1
+		claims.SessionEpoch = strconv.FormatInt(sessionEpoch, 10)
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	signed, err := token.SignedString(m.secret)
